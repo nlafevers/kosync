@@ -72,6 +72,11 @@ func handleUserCreate(storage *Storage, config *Config) http.HandlerFunc {
 	}
 }
 
+func handleAuth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"authorized": "OK"})
+}
+
 func randomDelay() {
 	n, err := rand.Int(rand.Reader, big.NewInt(500))
 	if err != nil {
