@@ -172,7 +172,7 @@ Set up the Go workspace using the standard library to minimize dependencies and 
   - `go get modernc.org/sqlite` (Pure Go SQLite driver).
   - `go get golang.org/x/crypto/bcrypt` (Secure password hashing).
   - `go get golang.org/x/time/rate` (Rate limiting).
-- [ ] **1.3 Define Configuration:** Use Environment Variables:
+- [x] **1.3 Define Configuration:** Use Environment Variables:
   - `KOSYNC_PORT` (default 8081).
   - `KOSYNC_DB_PATH` (`kosync.db`).
   - `KOSYNC_LOG_LEVEL`.
