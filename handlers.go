@@ -77,6 +77,33 @@ func handleAuth(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"authorized": "OK"})
 }
 
+func handleGetProgress(storage *Storage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		username := r.Header.Get("X-AUTH-USER")
+		document := r.PathValue("document")
+
+		if document == "" {
+			http.Error(w, "Document ID is required", http.StatusBadRequest)
+			return
+		}
+
+		progress, err := storage.GetProgress(username, document)
+		if err != nil {
+			slog.Error("failed to get progress", "username", username, "document", document, "error", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		if progress == nil {
+			slog.Warn("progress not found", "username", username, "document", document)
+			http.Error(w, "Not Found", http.StatusNotFound)
+			return
+		}
+
+		json.NewEncoder(w).Encode(progress)
+	}
+}
+
 func randomDelay() {
 	n, err := rand.Int(rand.Reader, big.NewInt(500))
 	if err != nil {

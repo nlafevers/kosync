@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 )
 
 func TestHandleUserCreate(t *testing.T) {
@@ -99,4 +100,61 @@ func TestHandleAuth(t *testing.T) {
 	if resp["authorized"] != "OK" {
 		t.Errorf("expected authorized: OK, got %s", resp["authorized"])
 	}
+}
+
+func TestHandleGetProgress(t *testing.T) {
+	dbPath := "test_handlers_progress.db"
+	defer os.Remove(dbPath)
+
+	storage, err := InitDB(dbPath)
+	if err != nil {
+		t.Fatalf("failed to init db: %v", err)
+	}
+	defer storage.Close()
+
+	username := "testuser"
+	docID := "testdoc"
+	progress := Progress{
+		Document:   docID,
+		Percentage: 0.5,
+		Timestamp:  time.Now().Unix(),
+	}
+
+	// Setup: create user and some progress
+	storage.CreateUser(username, "hash")
+	storage.UpsertProgress(username, progress)
+
+	handler := handleGetProgress(storage)
+
+	t.Run("Progress Found", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/syncs/progress/"+docID, nil)
+		req.Header.Set("X-AUTH-USER", username)
+		req.SetPathValue("document", docID) // Go 1.22 testing
+		rr := httptest.NewRecorder()
+
+		handler.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Errorf("expected status 200, got %d", rr.Code)
+		}
+
+		var resp Progress
+		json.NewDecoder(rr.Body).Decode(&resp)
+		if resp.Document != docID || resp.Percentage != 0.5 {
+			t.Errorf("unexpected progress data: %+v", resp)
+		}
+	})
+
+	t.Run("Progress Not Found", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/syncs/progress/unknown", nil)
+		req.Header.Set("X-AUTH-USER", username)
+		req.SetPathValue("document", "unknown")
+		rr := httptest.NewRecorder()
+
+		handler.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusNotFound {
+			t.Errorf("expected status 404, got %d", rr.Code)
+		}
+	})
 }
