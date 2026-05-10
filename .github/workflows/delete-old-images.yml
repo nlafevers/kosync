@@ -1,0 +1,21 @@
+name: Delete old images
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Runs every night at midnight
+  workflow_dispatch:      # Allows manual cleanup
+
+jobs:
+  clean-ghcr:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: Delete Old Images
+        uses: snok/container-retention-policy@v3.0.0
+        with:
+          account: user
+          token: ${{ secrets.GITHUB_TOKEN }}
+          image-names: ${{ github.event.repository.name }}
+          cut-off: 30d             # Keep images for 30 days
+          keep-n-most-recent: 3         # Always keep the 3 newest images
