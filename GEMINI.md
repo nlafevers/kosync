@@ -207,10 +207,10 @@ Implement the persistence logic and protect user credentials.
 ### Phase 3: Middleware & Authentication
 Handle the "plumbing" of the KOReader protocol, specifically the custom headers.
 
-- [-] **3.1 Auth Middleware:** Create a wrapper that validates `X-AUTH-USER` and `X-AUTH-KEY` against the database for every protected request.
-- [ ] **3.2 Header Validation:** Create middleware to ensure the `Accept` header matches `application/vnd.koreader.v1+json`.
-- [ ] **3.3 Content-Type Enforcement:** Ensure the server always responds with the correct KOReader-specific MIME type.
-- [ ] **3.4 Application Rate Limiting:** Implement rate limiting per IP for registration and auth endpoints.
+- [x] **3.1 Auth Middleware:** Create a wrapper that validates `X-AUTH-USER` and `X-AUTH-KEY` against the database for every protected request.
+- [x] **3.2 Header Validation:** Create middleware to ensure the `Accept` header matches `application/vnd.koreader.v1+json`.
+- [x] **3.3 Content-Type Enforcement:** Ensure the server always responds with the correct KOReader-specific MIME type.
+- [x] **3.4 Application Rate Limiting:** Implement rate limiting per IP for registration and auth endpoints.
 
 -----
 
