@@ -83,3 +83,20 @@ func TestHandleUserCreate(t *testing.T) {
 		}
 	})
 }
+
+func TestHandleAuth(t *testing.T) {
+	req := httptest.NewRequest("GET", "/users/auth", nil)
+	rr := httptest.NewRecorder()
+
+	handleAuth(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d", rr.Code)
+	}
+
+	var resp map[string]string
+	json.NewDecoder(rr.Body).Decode(&resp)
+	if resp["authorized"] != "OK" {
+		t.Errorf("expected authorized: OK, got %s", resp["authorized"])
+	}
+}
