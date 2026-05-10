@@ -83,3 +83,37 @@ func (s *Storage) createTables() error {
 func (s *Storage) Close() error {
 	return s.db.Close()
 }
+
+// GetProgress retrieves the reading progress for a specific user and document.
+func (s *Storage) GetProgress(username, document string) (*Progress, error) {
+	query := `SELECT document, percentage, progress, device_id, device, timestamp FROM progress WHERE username = ? AND document = ?`
+	row := s.db.QueryRow(query, username, document)
+
+	var p Progress
+	err := row.Scan(&p.Document, &p.Percentage, &p.Progress, &p.DeviceID, &p.Device, &p.Timestamp)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
+// UpsertProgress inserts or updates the reading progress.
+// It only updates if the incoming timestamp is newer than the existing one.
+func (s *Storage) UpsertProgress(username string, p Progress) error {
+	query := `
+	INSERT INTO progress (username, document, percentage, progress, device_id, device, timestamp)
+	VALUES (?, ?, ?, ?, ?, ?, ?)
+	ON CONFLICT(username, document) DO UPDATE SET
+		percentage = excluded.percentage,
+		progress = excluded.progress,
+		device_id = excluded.device_id,
+		device = excluded.device,
+		timestamp = excluded.timestamp
+	WHERE excluded.timestamp > progress.timestamp;`
+
+	_, err := s.db.Exec(query, username, p.Document, p.Percentage, p.Progress, p.DeviceID, p.Device, p.Timestamp)
+	return err
+}
