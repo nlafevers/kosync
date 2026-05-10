@@ -178,7 +178,7 @@ Set up the Go workspace using the standard library to minimize dependencies and 
   - `KOSYNC_LOG_LEVEL`.
   - `KOSYNC_DISABLE_REGISTRATION` (bool).
   - `KOSYNC_STORAGE_CAP_MB` (optional).
-- [ ] **1.4 Logging:** Implement structured logging using `log/slog`.
+- [x] **1.4 Logging:** Implement structured logging using `log/slog`.
 - [ ] **1.5 Define Data Structures:** Create structs with JSON tags matching the KOReader protocol:
   - `User`: `username` and `password_hash`.
   - `Progress`: `document`, `percentage`, `progress`, `device_id`, `device`, and `timestamp`.
