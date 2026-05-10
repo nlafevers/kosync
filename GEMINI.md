@@ -188,26 +188,26 @@ Set up the Go workspace using the standard library to minimize dependencies and 
 ### Phase 2: The Data Layer & Password Security
 Implement the persistence logic and protect user credentials.
 
-- [ ] **2.1 Initialize DB:** Write `initDB()` to open SQLite and create tables:
+- [x] **2.1 Initialize DB:** Write `initDB()` to open SQLite and create tables:
   - `Users`: `username` (PK), `password_hash`.
   - `Progress`: `username`, `document`, `percentage`, `progress`, `device_id`, `device`, `timestamp`. Use a **Composite Primary Key** on `(username, document)`.
   - **Security:** Ensure the database file is created with `0600` permissions. Enable WAL mode and set `SetMaxOpenConns(1)`.
-- [ ] **2.2 Password Security:** Implement `HashPassword` and `CheckPassword` functions using **Bcrypt** (Cost factor 12) to secure the `X-AUTH-KEY` received from the client.
-- [ ] **2.3 Progress Logic:**
+- [x] **2.2 Password Security:** Implement `HashPassword` and `CheckPassword` functions using **Bcrypt** (Cost factor 12) to secure the `X-AUTH-KEY` received from the client.
+- [x] **2.3 Progress Logic:**
   - Write `GetProgressDB(user, docID)`: Returns the most recent record.
   - Write `UpsertProgressDB(Progress)`: Uses `INSERT ... ON CONFLICT(...) DO UPDATE` with prepared statements.
-- [ ] **2.4 CLI User Management:** Implement commands/functions for:
+- [x] **2.4 CLI User Management:** Implement commands/functions for:
   - Creating a user.
   - Deleting a user.
   - Changing a user's password.
-- [ ] **2.5 Storage Management:** Implement logic to monitor database size and cull oldest records if `KOSYNC_STORAGE_CAP_MB` is exceeded.
+- [x] **2.5 Storage Management:** Implement logic to monitor database size and cull oldest records if `KOSYNC_STORAGE_CAP_MB` is exceeded.
 
 -----
 
 ### Phase 3: Middleware & Authentication
 Handle the "plumbing" of the KOReader protocol, specifically the custom headers.
 
-- [ ] **3.1 Auth Middleware:** Create a wrapper that validates `X-AUTH-USER` and `X-AUTH-KEY` against the database for every protected request.
+- [-] **3.1 Auth Middleware:** Create a wrapper that validates `X-AUTH-USER` and `X-AUTH-KEY` against the database for every protected request.
 - [ ] **3.2 Header Validation:** Create middleware to ensure the `Accept` header matches `application/vnd.koreader.v1+json`.
 - [ ] **3.3 Content-Type Enforcement:** Ensure the server always responds with the correct KOReader-specific MIME type.
 - [ ] **3.4 Application Rate Limiting:** Implement rate limiting per IP for registration and auth endpoints.
