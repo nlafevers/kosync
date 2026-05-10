@@ -167,4 +167,28 @@ func TestUserManagement(t *testing.T) {
 	}
 }
 
+func TestStorageCap(t *testing.T) {
+	dbPath := "test_cap.db"
+	defer os.Remove(dbPath)
+
+	storage, err := InitDB(dbPath)
+	if err != nil {
+		t.Fatalf("failed to init db: %v", err)
+	}
+	defer storage.Close()
+
+	// Just verify it doesn't error on a small file with a 1MB cap
+	triggered, err := storage.EnforceStorageCap(dbPath, 1)
+	if err != nil {
+		t.Errorf("EnforceStorageCap failed: %v", err)
+	}
+	if triggered {
+		t.Errorf("EnforceStorageCap triggered unexpectedly on a %d byte file", func() int64 {
+			s, _ := os.Stat(dbPath)
+			return s.Size()
+		}())
+	}
+}
+
+
 
