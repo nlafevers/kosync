@@ -35,3 +35,84 @@ func TestInitDB(t *testing.T) {
 		t.Errorf("progress table does not exist or is not accessible: %v", err)
 	}
 }
+
+func TestProgress(t *testing.T) {
+	dbPath := "test_progress.db"
+	defer os.Remove(dbPath)
+
+	storage, err := InitDB(dbPath)
+	if err != nil {
+		t.Fatalf("failed to init db: %v", err)
+	}
+	defer storage.Close()
+
+	username := "testuser"
+	docID := "testdoc"
+
+	// Create user first due to foreign key
+	_, err = storage.db.Exec("INSERT INTO users (username, password_hash) VALUES (?, ?)", username, "hash")
+	if err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
+
+	p1 := Progress{
+		Document:   docID,
+		Percentage: 0.5,
+		Progress:   "loc1",
+		DeviceID:   "dev1",
+		Device:     "kindle",
+		Timestamp:  100,
+	}
+
+	// Test Insert
+	if err := storage.UpsertProgress(username, p1); err != nil {
+		t.Fatalf("failed to upsert progress: %v", err)
+	}
+
+	got, err := storage.GetProgress(username, docID)
+	if err != nil {
+		t.Fatalf("failed to get progress: %v", err)
+	}
+	if got == nil {
+		t.Fatal("expected progress, got nil")
+	}
+	if got.Timestamp != 100 {
+		t.Errorf("expected timestamp 100, got %d", got.Timestamp)
+	}
+
+	// Test Update with newer timestamp
+	p2 := p1
+	p2.Timestamp = 200
+	p2.Percentage = 0.6
+	if err := storage.UpsertProgress(username, p2); err != nil {
+		t.Fatalf("failed to update progress: %v", err)
+	}
+
+	got, err = storage.GetProgress(username, docID)
+	if err != nil {
+		t.Fatalf("failed to get progress: %v", err)
+	}
+	if got.Timestamp != 200 {
+		t.Errorf("expected timestamp 200, got %d", got.Timestamp)
+	}
+
+	// Test Update with older timestamp (should be ignored)
+	p3 := p1
+	p3.Timestamp = 150
+	p3.Percentage = 0.7
+	if err := storage.UpsertProgress(username, p3); err != nil {
+		t.Fatalf("failed to update progress: %v", err)
+	}
+
+	got, err = storage.GetProgress(username, docID)
+	if err != nil {
+		t.Fatalf("failed to get progress: %v", err)
+	}
+	if got.Timestamp != 200 {
+		t.Errorf("expected timestamp 200 to be preserved, got %d", got.Timestamp)
+	}
+	if got.Percentage != 0.6 {
+		t.Errorf("expected percentage 0.6 to be preserved, got %f", got.Percentage)
+	}
+}
+
