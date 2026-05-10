@@ -104,6 +104,38 @@ func handleGetProgress(storage *Storage) http.HandlerFunc {
 	}
 }
 
+func handleUpdateProgress(storage *Storage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		username := r.Header.Get("X-AUTH-USER")
+
+		var p Progress
+		if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+			slog.Error("failed to decode progress update", "username", username, "error", err)
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		if p.Document == "" {
+			http.Error(w, "Document ID is required", http.StatusBadRequest)
+			return
+		}
+
+		// Set server-side timestamp if not provided or if we want to ensure server-side truth
+		// KOReader might send a timestamp, but the server-side arrival time is often preferred for sync logic.
+		p.Timestamp = time.Now().Unix()
+
+		if err := storage.UpsertProgress(username, p); err != nil {
+			slog.Error("failed to upsert progress", "username", username, "document", p.Document, "error", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		slog.Info("progress updated", "username", username, "document", p.Document)
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Progress updated"})
+	}
+}
+
 func randomDelay() {
 	n, err := rand.Int(rand.Reader, big.NewInt(500))
 	if err != nil {

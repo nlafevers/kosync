@@ -217,10 +217,10 @@ Handle the "plumbing" of the KOReader protocol, specifically the custom headers.
 ### Phase 4: API Handlers
 Map the four specific requests identified during reverse engineering.  Handle any errors gracefully.
 
-- [ ] **4.1 User Registration (`POST /users/create`):** Decode JSON, check `KOSYNC_DISABLE_REGISTRATION`, bcrypt the password hash, and save. Handle existing users with a random delay.
-- [ ] **4.2 Auth Check (`GET /users/auth`):** Return `200 OK` with `{"authorized": "OK"}` if the middleware passes.
-- [ ] **4.3 Get Progress (`GET /syncs/progress/{document}`):** Sanitize/validate `document` (MD5 format), query DB, and return JSON.
-- [ ] **4.4 Update Progress (`PUT /syncs/progress`):** Decode the JSON body, sanitize inputs, and call the Upsert function. Return `201 Created` or `204 No Content` (Verify with real client).
+- [x] **4.1 User Registration (`POST /users/create`):** Decode JSON, check `KOSYNC_DISABLE_REGISTRATION`, bcrypt the password hash, and save. Handle existing users with a random delay.
+- [x] **4.2 Auth Check (`GET /users/auth`):** Return `200 OK` with `{"authorized": "OK"}` if the middleware passes.
+- [x] **4.3 Get Progress (`GET /syncs/progress/{document}`):** Sanitize/validate `document` (MD5 format), query DB, and return JSON.
+- [x] **4.4 Update Progress (`PUT /syncs/progress`):** Decode the JSON body, sanitize inputs, and call the Upsert function. Return `201 Created` or `204 No Content` (Verify with real client).
 
 -----
 

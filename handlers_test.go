@@ -158,3 +158,58 @@ func TestHandleGetProgress(t *testing.T) {
 		}
 	})
 }
+
+func TestHandleUpdateProgress(t *testing.T) {
+	dbPath := "test_handlers_update.db"
+	defer os.Remove(dbPath)
+
+	storage, err := InitDB(dbPath)
+	if err != nil {
+		t.Fatalf("failed to init db: %v", err)
+	}
+	defer storage.Close()
+
+	username := "testuser"
+	storage.CreateUser(username, "hash")
+
+	handler := handleUpdateProgress(storage)
+
+	t.Run("Successful Update", func(t *testing.T) {
+		p := Progress{
+			Document:   "testdoc",
+			Percentage: 0.8,
+			Progress:   "/page/10",
+			DeviceID:   "dev123",
+			Device:     "kindle",
+		}
+		reqBody, _ := json.Marshal(p)
+		req := httptest.NewRequest("PUT", "/syncs/progress", bytes.NewBuffer(reqBody))
+		req.Header.Set("X-AUTH-USER", username)
+		rr := httptest.NewRecorder()
+
+		handler.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Errorf("expected status 200, got %d", rr.Code)
+		}
+
+		// Verify in DB
+		got, _ := storage.GetProgress(username, "testdoc")
+		if got.Percentage != 0.8 || got.DeviceID != "dev123" {
+			t.Errorf("unexpected progress data in db: %+v", got)
+		}
+	})
+
+	t.Run("Missing Document ID", func(t *testing.T) {
+		reqBody, _ := json.Marshal(Progress{Percentage: 0.5})
+		req := httptest.NewRequest("PUT", "/syncs/progress", bytes.NewBuffer(reqBody))
+		req.Header.Set("X-AUTH-USER", username)
+		rr := httptest.NewRecorder()
+
+		handler.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusBadRequest {
+			t.Errorf("expected status 400, got %d", rr.Code)
+		}
+	})
+}
