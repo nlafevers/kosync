@@ -42,10 +42,14 @@ func handleUserCreate(storage *Storage, config *Config) http.HandlerFunc {
 		// Check if user already exists
 		existingHash, err := storage.GetUserHash(req.Username)
 		if err == nil && existingHash != "" {
-			slog.Warn("registration attempt for existing user", "username", req.Username)
-			// Random delay to prevent timing attacks
+			slog.Info("registration attempt for existing user", "username", req.Username)
+			// Random delay to prevent timing attacks, then pretend it succeeded
 			randomDelay()
-			http.Error(w, "User already exists", http.StatusConflict)
+			w.WriteHeader(http.StatusCreated)
+			json.NewEncoder(w).Encode(UserCreateResponse{
+				Username: req.Username,
+				Message:  "User created",
+			})
 			return
 		}
 
@@ -117,6 +121,13 @@ func handleUpdateProgress(storage *Storage) http.HandlerFunc {
 
 		if p.Document == "" {
 			http.Error(w, "Document ID is required", http.StatusBadRequest)
+			return
+		}
+
+		// Validate percentage
+		if p.Percentage < 0 || p.Percentage > 1 {
+			slog.Warn("invalid progress percentage", "username", username, "percentage", p.Percentage)
+			http.Error(w, "Percentage must be between 0 and 1 inclusive", http.StatusBadRequest)
 			return
 		}
 

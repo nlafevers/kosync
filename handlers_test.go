@@ -63,8 +63,8 @@ func TestHandleUserCreate(t *testing.T) {
 
 		handler.ServeHTTP(rr, req)
 
-		if rr.Code != http.StatusConflict {
-			t.Errorf("expected status 409, got %d", rr.Code)
+		if rr.Code != http.StatusCreated {
+			t.Errorf("expected status 201, got %d", rr.Code)
 		}
 	})
 
@@ -202,6 +202,19 @@ func TestHandleUpdateProgress(t *testing.T) {
 
 	t.Run("Missing Document ID", func(t *testing.T) {
 		reqBody, _ := json.Marshal(Progress{Percentage: 0.5})
+		req := httptest.NewRequest("PUT", "/syncs/progress", bytes.NewBuffer(reqBody))
+		req.Header.Set("X-AUTH-USER", username)
+		rr := httptest.NewRecorder()
+
+		handler.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusBadRequest {
+			t.Errorf("expected status 400, got %d", rr.Code)
+		}
+	})
+
+	t.Run("Invalid Percentage", func(t *testing.T) {
+		reqBody, _ := json.Marshal(Progress{Document: "doc1", Percentage: 1.5})
 		req := httptest.NewRequest("PUT", "/syncs/progress", bytes.NewBuffer(reqBody))
 		req.Header.Set("X-AUTH-USER", username)
 		rr := httptest.NewRecorder()
