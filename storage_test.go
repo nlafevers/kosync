@@ -116,3 +116,55 @@ func TestProgress(t *testing.T) {
 	}
 }
 
+func TestUserManagement(t *testing.T) {
+	dbPath := "test_users.db"
+	defer os.Remove(dbPath)
+
+	storage, err := InitDB(dbPath)
+	if err != nil {
+		t.Fatalf("failed to init db: %v", err)
+	}
+	defer storage.Close()
+
+	username := "alice"
+	password := "alice123"
+
+	// Create
+	if err := storage.CreateUser(username, password); err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
+
+	hash, err := storage.GetUserHash(username)
+	if err != nil {
+		t.Fatalf("failed to get hash: %v", err)
+	}
+	if !CheckPassword(password, hash) {
+		t.Error("password check failed")
+	}
+
+	// Update
+	newPassword := "alice456"
+	if err := storage.UpdateUserPassword(username, newPassword); err != nil {
+		t.Fatalf("failed to update password: %v", err)
+	}
+
+	hash, _ = storage.GetUserHash(username)
+	if !CheckPassword(newPassword, hash) {
+		t.Error("new password check failed")
+	}
+
+	// Delete
+	if err := storage.DeleteUser(username); err != nil {
+		t.Fatalf("failed to delete user: %v", err)
+	}
+
+	hash, err = storage.GetUserHash(username)
+	if err != nil {
+		t.Fatalf("failed to get hash after delete: %v", err)
+	}
+	if hash != "" {
+		t.Error("hash should be empty after delete")
+	}
+}
+
+

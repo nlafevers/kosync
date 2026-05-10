@@ -117,3 +117,61 @@ func (s *Storage) UpsertProgress(username string, p Progress) error {
 	_, err := s.db.Exec(query, username, p.Document, p.Percentage, p.Progress, p.DeviceID, p.Device, p.Timestamp)
 	return err
 }
+
+// CreateUser creates a new user with a hashed password.
+func (s *Storage) CreateUser(username, password string) error {
+	hash, err := HashPassword(password)
+	if err != nil {
+		return err
+	}
+	_, err = s.db.Exec("INSERT INTO users (username, password_hash) VALUES (?, ?)", username, hash)
+	return err
+}
+
+// GetUserHash retrieves the password hash for a user.
+func (s *Storage) GetUserHash(username string) (string, error) {
+	var hash string
+	err := s.db.QueryRow("SELECT password_hash FROM users WHERE username = ?", username).Scan(&hash)
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	return hash, err
+}
+
+// UpdateUserPassword updates a user's password.
+func (s *Storage) UpdateUserPassword(username, password string) error {
+	hash, err := HashPassword(password)
+	if err != nil {
+		return err
+	}
+	res, err := s.db.Exec("UPDATE users SET password_hash = ? WHERE username = ?", hash, username)
+	if err != nil {
+		return err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return fmt.Errorf("user not found")
+	}
+	return nil
+}
+
+// DeleteUser removes a user and their reading progress.
+func (s *Storage) DeleteUser(username string) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Exec("DELETE FROM progress WHERE username = ?", username); err != nil {
+		return err
+	}
+	if _, err := tx.Exec("DELETE FROM users WHERE username = ?", username); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
