@@ -168,7 +168,7 @@ At the beginning of work on each step, prior to making any changes to any code, 
 Set up the Go workspace using the standard library to minimize dependencies and ensure long-term maintainability.
 
 - [x] **1.1 Initialize Module:** Run `go mod init kosync`.
-- [ ] **1.2 Install Core Dependencies:** 
+- [x] **1.2 Install Core Dependencies:** 
   - `go get modernc.org/sqlite` (Pure Go SQLite driver).
   - `go get golang.org/x/crypto/bcrypt` (Secure password hashing).
   - `go get golang.org/x/time/rate` (Rate limiting).
