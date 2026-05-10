@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"os"
 	"testing"
 )
@@ -115,8 +116,7 @@ func TestProgress(t *testing.T) {
 		t.Errorf("expected percentage 0.6 to be preserved, got %f", got.Percentage)
 	}
 }
-
-func TestUserManagement(t *testing.T) {
+func TestUserCRUD(t *testing.T) {
 	dbPath := "test_users.db"
 	defer os.Remove(dbPath)
 
@@ -126,31 +126,34 @@ func TestUserManagement(t *testing.T) {
 	}
 	defer storage.Close()
 
-	username := "alice"
-	password := "alice123"
+	username := "testuser"
+	password := "testpass"
+	hash, _ := HashPassword(password)
 
 	// Create
-	if err := storage.CreateUser(username, password); err != nil {
-		t.Fatalf("failed to create user: %v", err)
+	if err := storage.CreateUser(username, hash); err != nil {
+		t.Errorf("failed to create user: %v", err)
 	}
 
-	hash, err := storage.GetUserHash(username)
+	// Read
+	gotHash, err := storage.GetUserHash(username)
 	if err != nil {
-		t.Fatalf("failed to get hash: %v", err)
+		t.Errorf("failed to get user hash: %v", err)
 	}
-	if !CheckPassword(password, hash) {
-		t.Error("password check failed")
+	if gotHash != hash {
+		t.Errorf("expected hash %q, got %q", hash, gotHash)
 	}
 
 	// Update
-	newPassword := "alice456"
-	if err := storage.UpdateUserPassword(username, newPassword); err != nil {
-		t.Fatalf("failed to update password: %v", err)
+	newPassword := "newpass"
+	newHash, _ := HashPassword(newPassword)
+	if err := storage.UpdateUserPassword(username, newHash); err != nil {
+		t.Errorf("failed to update user password: %v", err)
 	}
 
-	hash, _ = storage.GetUserHash(username)
-	if !CheckPassword(newPassword, hash) {
-		t.Error("new password check failed")
+	gotHash, _ = storage.GetUserHash(username)
+	if gotHash != newHash {
+		t.Errorf("expected new hash %q, got %q", newHash, gotHash)
 	}
 
 	// Delete
@@ -158,12 +161,9 @@ func TestUserManagement(t *testing.T) {
 		t.Fatalf("failed to delete user: %v", err)
 	}
 
-	hash, err = storage.GetUserHash(username)
-	if err != nil {
-		t.Fatalf("failed to get hash after delete: %v", err)
-	}
-	if hash != "" {
-		t.Error("hash should be empty after delete")
+	_, err = storage.GetUserHash(username)
+	if err != sql.ErrNoRows {
+		t.Errorf("expected sql.ErrNoRows after delete, got %v", err)
 	}
 }
 

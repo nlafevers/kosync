@@ -13,11 +13,11 @@ func TestPasswordHashing(t *testing.T) {
 		t.Error("hash should not be equal to password")
 	}
 
-	if !CheckPassword(password, hash) {
+	if !CheckPassword(hash, password) {
 		t.Error("password check should have passed")
 	}
 
-	if CheckPassword("wrong-password", hash) {
+	if CheckPassword(hash, "wrong-password") {
 		t.Error("password check should have failed")
 	}
 }

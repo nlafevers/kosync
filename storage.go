@@ -118,13 +118,9 @@ func (s *Storage) UpsertProgress(username string, p Progress) error {
 	return err
 }
 
-// CreateUser creates a new user with a hashed password.
+// CreateUser creates a new user with a password (which should be the MD5 hash from the client).
 func (s *Storage) CreateUser(username, password string) error {
-	hash, err := HashPassword(password)
-	if err != nil {
-		return err
-	}
-	_, err = s.db.Exec("INSERT INTO users (username, password_hash) VALUES (?, ?)", username, hash)
+	_, err := s.db.Exec("INSERT INTO users (username, password_hash) VALUES (?, ?)", username, password)
 	return err
 }
 
@@ -132,19 +128,12 @@ func (s *Storage) CreateUser(username, password string) error {
 func (s *Storage) GetUserHash(username string) (string, error) {
 	var hash string
 	err := s.db.QueryRow("SELECT password_hash FROM users WHERE username = ?", username).Scan(&hash)
-	if err == sql.ErrNoRows {
-		return "", nil
-	}
 	return hash, err
 }
 
-// UpdateUserPassword updates a user's password.
-func (s *Storage) UpdateUserPassword(username, password string) error {
-	hash, err := HashPassword(password)
-	if err != nil {
-		return err
-	}
-	res, err := s.db.Exec("UPDATE users SET password_hash = ? WHERE username = ?", hash, username)
+// UpdateUserPassword updates a user's password hash.
+func (s *Storage) UpdateUserPassword(username, passwordHash string) error {
+	res, err := s.db.Exec("UPDATE users SET password_hash = ? WHERE username = ?", passwordHash, username)
 	if err != nil {
 		return err
 	}
