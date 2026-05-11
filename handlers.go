@@ -22,14 +22,14 @@ type UserCreateResponse struct {
 func handleUserCreate(storage *Storage, config *Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if config.DisableRegistration {
-			slog.Warn("registration attempt while disabled", "remote_addr", r.RemoteAddr)
+			slog.Warn("registration attempt while disabled", "remote_addr", r.RemoteAddr, "source", "API")
 			http.Error(w, "Registration is disabled", http.StatusForbidden)
 			return
 		}
 
 		var req UserCreateRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			slog.Error("failed to decode registration request", "error", err)
+			slog.Error("failed to decode registration request", "error", err, "source", "API")
 			http.Error(w, "Invalid request body", http.StatusBadRequest)
 			return
 		}
@@ -42,7 +42,7 @@ func handleUserCreate(storage *Storage, config *Config) http.HandlerFunc {
 		// Check if user already exists
 		existingHash, err := storage.GetUserHash(req.Username)
 		if err == nil && existingHash != "" {
-			slog.Info("registration attempt for existing user", "username", req.Username)
+			slog.Info("registration attempt for existing user", "username", req.Username, "source", "API")
 			// Random delay to prevent timing attacks, then pretend it succeeded
 			randomDelay()
 			w.WriteHeader(http.StatusCreated)
@@ -56,18 +56,18 @@ func handleUserCreate(storage *Storage, config *Config) http.HandlerFunc {
 		// Hash the password (which is already an MD5 from the client) using Bcrypt
 		hash, err := HashPassword(req.Password)
 		if err != nil {
-			slog.Error("failed to hash password", "error", err)
+			slog.Error("failed to hash password", "username", req.Username, "error", err, "source", "API")
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 
 		if err := storage.CreateUser(req.Username, hash); err != nil {
-			slog.Error("failed to create user", "username", req.Username, "error", err)
+			slog.Error("failed to create user", "username", req.Username, "error", err, "source", "API")
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 
-		slog.Info("user created successfully", "username", req.Username)
+		slog.Info("user created successfully", "username", req.Username, "source", "API")
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(UserCreateResponse{
 			Username: req.Username,
