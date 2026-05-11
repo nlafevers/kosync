@@ -110,42 +110,52 @@ func runCLI(config Config) {
 		case "create-user":
 			password, err := passwordFromArgs(os.Args[3:], os.Stdin, os.Stdout)
 			if err != nil {
+				slog.Error("failed to read password", "username", username, "source", "CLI", "error", err)
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 				os.Exit(1)
 			}
 			hash, err := HashPassword(password)
 			if err != nil {
+				slog.Error("failed to hash password", "username", username, "source", "CLI", "error", err)
 				fmt.Fprintf(os.Stderr, "Error: failed to hash password: %v\n", err)
 				os.Exit(1)
 			}
 			if err := storage.CreateUser(username, hash); err != nil {
+				slog.Error("failed to create user", "username", username, "source", "CLI", "error", err)
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 				os.Exit(1)
 			}
+			slog.Info("user created successfully", "username", username, "source", "CLI")
 			fmt.Printf("User '%s' created successfully\n", username)
 
 		case "delete-user":
 			if err := storage.DeleteUser(username); err != nil {
+				slog.Error("failed to delete user", "username", username, "source", "CLI", "error", err)
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 				os.Exit(1)
 			}
+			slog.Info("user deleted successfully", "username", username, "source", "CLI")
 			fmt.Printf("User '%s' deleted successfully\n", username)
 
 		case "change-password":
 			password, err := passwordFromArgs(os.Args[3:], os.Stdin, os.Stdout)
 			if err != nil {
+				slog.Error("failed to read password", "username", username, "source", "CLI", "error", err)
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 				os.Exit(1)
 			}
 			hash, err := HashPassword(password)
 			if err != nil {
+				slog.Error("failed to hash password", "username", username, "source", "CLI", "error", err)
 				fmt.Fprintf(os.Stderr, "Error: failed to hash password: %v\n", err)
 				os.Exit(1)
 			}
 			if err := storage.UpdateUserPassword(username, hash); err != nil {
+				slog.Error("failed to update user password", "username", username, "source", "CLI", "error", err)
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 				os.Exit(1)
 			}
+			slog.Info("user password updated successfully", "username", username, "source", "CLI")
 			fmt.Printf("Password for user '%s' updated successfully\n", username)
 		}
 
