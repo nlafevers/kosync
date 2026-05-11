@@ -13,6 +13,16 @@
 # AI files
 AGENT.md
 CLAUDE.md
+GEMINI.md
+LLAMA.md
+MISTRAL.md
+MOSS.md
+PREDICTION.md
+QWEN.md
+ROUGE.md
+SANTACODER.md
+T5.md
+UL2.md
 
 # Binaries for programs and plugins
 *.exe
