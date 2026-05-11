@@ -12,9 +12,12 @@ type Storage struct {
 	db *sql.DB
 }
 
-func InitDB(path string) (*Storage, error) {
-	// 2.1 Security: Ensure the database file is created with 0600 permissions if it doesn't exist.
+func InitDB(path string, allowCreate bool) (*Storage, error) {
+	// 2.1 Security: Ensure the database file is handled with 0600 permissions.
 	if _, err := os.Stat(path); os.IsNotExist(err) {
+		if !allowCreate {
+			return nil, fmt.Errorf("database file does not exist: %s", path)
+		}
 		file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0600)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create db file with 0600: %w", err)

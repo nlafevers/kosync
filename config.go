@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 	"strconv"
 )
 
@@ -14,9 +15,20 @@ type Config struct {
 }
 
 func LoadConfig() Config {
+	dbPath := getEnv("KOSYNC_DB_PATH", "kosync.db")
+
+	// If the path is relative, resolve it relative to the executable's directory.
+	if !filepath.IsAbs(dbPath) {
+		exePath, err := os.Executable()
+		if err == nil {
+			exeDir := filepath.Dir(exePath)
+			dbPath = filepath.Join(exeDir, dbPath)
+		}
+	}
+
 	return Config{
 		Port:                getEnv("KOSYNC_PORT", "8081"),
-		DBPath:              getEnv("KOSYNC_DB_PATH", "kosync.db"),
+		DBPath:              dbPath,
 		LogLevel:            getEnv("KOSYNC_LOG_LEVEL", "info"),
 		DisableRegistration: getEnvBool("KOSYNC_DISABLE_REGISTRATION", false),
 		StorageCapMB:        getEnvInt("KOSYNC_STORAGE_CAP_MB", 0),

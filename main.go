@@ -32,7 +32,7 @@ func main() {
 		"log_level", config.LogLevel,
 	)
 
-	storage, err := InitDB(config.DBPath)
+	storage, err := InitDB(config.DBPath, true)
 	if err != nil {
 		slog.Error("failed to initialize database", "error", err)
 		os.Exit(1)
@@ -98,9 +98,11 @@ func runCLI(config Config) {
 		}
 		username := os.Args[2]
 
-		storage, err := InitDB(config.DBPath)
+		fmt.Printf("Using database: %s\n", config.DBPath)
+
+		storage, err := InitDB(config.DBPath, false)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to initialize database: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
 		defer storage.Close()

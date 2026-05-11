@@ -272,6 +272,16 @@ Missing or incorrectly implemented features from the earlier phases.
   - [x] **8.1.2 CLI Format:** Refactor the `create-user`, `delete-user`, and `change-password` commands to take the format `./kosync COMMAND_NAME USERNAME` so there is no need to pass a `-u` flag every time for username.
   - [x] **8.1.3 Refactor Password Input Techniques:** To avoid having the passwords show up in the shell history, implement a hidden, interactive password input emulating the techniques used in KOPDS.  And like in KOPDS, there should be an option to pass an optional flag `--password-stdin` to re-enable non-interactive password entry for automation (for example `echo "mypassword" | docker exec -i kosync ./kosync create-user admin --password-stdin`). Use of `golang.org/x/term` is explicitly allowed to achieve this. Avoid requiring a version of Go later than 1.22.  See below for the code snipper from KOPDS:
 
+-----
+
+### Phase 9: Database Consistency & Path Resolution
+Ensure the server and CLI always use the same database and prevent accidental file creation.
+
+- [x] **9.1 Absolute Path Resolution:** Modify `config.go` to resolve the database path to an absolute path relative to the executable by default.
+- [x] **9.2 Creation Safeguard:** Update `InitDB` to prevent the CLI from creating new database files.
+- [x] **9.3 CLI Path Logging:** Update the CLI to explicitly log the database path it is using for transparency.
+
+
 ```Go
 func main() {
 	// 1. Load Config
