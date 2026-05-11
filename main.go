@@ -17,14 +17,13 @@ import (
 
 func main() {
 	config := LoadConfig()
+	InitLogger(config.LogLevel)
 
 	// Handle CLI commands
 	if len(os.Args) > 1 {
 		runCLI(config)
 		return
 	}
-
-	InitLogger(config.LogLevel)
 
 	slog.Info("KOSYNC starting",
 		"port", config.Port,
