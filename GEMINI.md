@@ -255,9 +255,9 @@ Stitch everything into the main entry point using Go 1.22's enhanced `net/http` 
 ### Phase 7: Deployment Documentation (README Tasks)
 Create a `README.md` focused on helping novices deploy the server safely.
 
-- [ ] **7.1 Reverse Proxy Guide:** Write a section on configuring **Caddy** to handle HTTPS/SSL.
-- [ ] **7.2 Security Best Practices:** 
+- [x] **7.1 Reverse Proxy Guide:** Write a section on configuring **Caddy** to handle HTTPS/SSL.
+- [x] **7.2 Security Best Practices:** 
   - Add instructions for running the Go binary as a non-root user.
   - Add instructions for setting up a basic firewall (UFW).
-- [ ] **7.3 SQLite Maintenance:** Explain how to back up the `.db` file using the SQLite `.backup` command.
-- [ ] **7.4 Novice-Friendly Setup:** Provide a sample `docker-compose.yaml` that bundles `kosync` and `Caddy` together for one-click deployment.
+- [x] **7.3 SQLite Maintenance:** Explain how to back up the `.db` file using the SQLite `.backup` command.
+- [x] **7.4 Novice-Friendly Setup:** Provide a sample `docker-compose.yaml` that bundles `kosync` and `Caddy` together for one-click deployment.
