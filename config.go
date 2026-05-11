@@ -10,6 +10,7 @@ type Config struct {
 	Port                string
 	DBPath              string
 	LogLevel            string
+	LogPath             string
 	DisableRegistration bool
 	StorageCapMB        int
 }
@@ -30,6 +31,7 @@ func LoadConfig() Config {
 		Port:                getEnv("KOSYNC_PORT", "8081"),
 		DBPath:              dbPath,
 		LogLevel:            getEnv("KOSYNC_LOG_LEVEL", "info"),
+		LogPath:             getEnv("KOSYNC_LOG_PATH", ""),
 		DisableRegistration: getEnvBool("KOSYNC_DISABLE_REGISTRATION", false),
 		StorageCapMB:        getEnvInt("KOSYNC_STORAGE_CAP_MB", 0),
 	}
