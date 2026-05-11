@@ -287,5 +287,6 @@ Missing or incorrectly implemented features from the earlier phases.
   - [x] **8.4.3 API Logging:** Update `handleUserCreate` in `handlers.go` to include a `source: API` attribute in its log entries.
   - [x] **8.4.4 Verification:** Verify that logs from both sources (CLI and API) correctly identify the source and username in the structured output.
   - [x] **8.4.5 Shared Log File Support:** Implement `KOSYNC_LOG_PATH` to allow unified logging to a file across separate processes (Server and CLI).
+  - [x] **8.4.6 Automatic Log Discovery:** Implement automatic detection of `kosync.log` in the application directory to simplify CLI usage and ensure unified logging by default.
 
 
