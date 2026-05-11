@@ -268,9 +268,9 @@ Create a `README.md` focused on helping novices deploy the server safely.
 Missing or incorrectly implemented features from the earlier phases.
 
 - [ ] **8.1 CLI User Management:** The desired outcome of step 2.5 was a command line UI for the server admin to use to create and delete users, as well as change user passwords.  Instead, functions were written in `storage.go` to talk to the database about usernames and password, but there was no UI implemented.  In subsequent edits an attempt was made to implement a user management command line UI in `main.go`, but this also does not meet expectations.
-  - [-] **8.1.1 Change Password:** Add a `change-password` command.
-  - [ ] **8.1.2 CLI Format:** Refactor the `create-user`, `delete-user`, and `change-password` commands to take the format `./kosync COMMAND_NAME USERNAME` so there is no need to pass a `-u` flag every time for username.
-  - [ ] **8.1.3 Refactor Password Input Techniques:** To avoid having the passwords show up in the shell history, implement a hidden, interactive password input emulating the techniques used in KOPDS.  And like in KOPDS, there should be an option to pass an optional flag `--password-stdin` to re-enable non-interactive password entry for automation (for example `echo "mypassword" | docker exec -i kosync ./kosync create-user admin --password-stdin`). Use of `golang.org/x/term` is explicitly allowed to achieve this. Avoid requiring a version of Go later than 1.22.  See below for the code snipper from KOPDS:
+  - [x] **8.1.1 Change Password:** Add a `change-password` command.
+  - [x] **8.1.2 CLI Format:** Refactor the `create-user`, `delete-user`, and `change-password` commands to take the format `./kosync COMMAND_NAME USERNAME` so there is no need to pass a `-u` flag every time for username.
+  - [x] **8.1.3 Refactor Password Input Techniques:** To avoid having the passwords show up in the shell history, implement a hidden, interactive password input emulating the techniques used in KOPDS.  And like in KOPDS, there should be an option to pass an optional flag `--password-stdin` to re-enable non-interactive password entry for automation (for example `echo "mypassword" | docker exec -i kosync ./kosync create-user admin --password-stdin`). Use of `golang.org/x/term` is explicitly allowed to achieve this. Avoid requiring a version of Go later than 1.22.  See below for the code snipper from KOPDS:
 
 ```Go
 func main() {
