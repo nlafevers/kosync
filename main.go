@@ -98,6 +98,11 @@ func runCLI(config Config) {
 		username := os.Args[2]
 
 		fmt.Printf("Using database: %s\n", config.DBPath)
+		if config.LogPath != "" {
+			fmt.Printf("Using log:      %s\n", config.LogPath)
+		} else {
+			fmt.Printf("Using log:      No log file specified (logging to stdout only)\n")
+		}
 
 		storage, err := InitDB(config.DBPath, false)
 		if err != nil {

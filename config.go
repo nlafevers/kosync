@@ -16,14 +16,27 @@ type Config struct {
 }
 
 func LoadConfig() Config {
-	dbPath := getEnv("KOSYNC_DB_PATH", "kosync.db")
+	exePath, err := os.Executable()
+	exeDir := ""
+	if err == nil {
+		exeDir = filepath.Dir(exePath)
+	}
 
-	// If the path is relative, resolve it relative to the executable's directory.
-	if !filepath.IsAbs(dbPath) {
-		exePath, err := os.Executable()
-		if err == nil {
-			exeDir := filepath.Dir(exePath)
-			dbPath = filepath.Join(exeDir, dbPath)
+	dbPath := getEnv("KOSYNC_DB_PATH", "kosync.db")
+	if !filepath.IsAbs(dbPath) && exeDir != "" {
+		dbPath = filepath.Join(exeDir, dbPath)
+	}
+
+	logPath := getEnv("KOSYNC_LOG_PATH", "")
+	if logPath != "" {
+		if !filepath.IsAbs(logPath) && exeDir != "" {
+			logPath = filepath.Join(exeDir, logPath)
+		}
+	} else if exeDir != "" {
+		// Auto-discover kosync.log in the application directory
+		defaultLog := filepath.Join(exeDir, "kosync.log")
+		if _, err := os.Stat(defaultLog); err == nil {
+			logPath = defaultLog
 		}
 	}
 
@@ -31,7 +44,7 @@ func LoadConfig() Config {
 		Port:                getEnv("KOSYNC_PORT", "8081"),
 		DBPath:              dbPath,
 		LogLevel:            getEnv("KOSYNC_LOG_LEVEL", "info"),
-		LogPath:             getEnv("KOSYNC_LOG_PATH", ""),
+		LogPath:             logPath,
 		DisableRegistration: getEnvBool("KOSYNC_DISABLE_REGISTRATION", false),
 		StorageCapMB:        getEnvInt("KOSYNC_STORAGE_CAP_MB", 0),
 	}
