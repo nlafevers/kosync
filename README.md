@@ -159,7 +159,13 @@ For users who prefer running KOSYNC without Docker, you can use one of the provi
 ### 1. Build from Source
 ```bash
 git clone https://github.com/nlafevers/kosync.git
-cd kosync
+```
+or, to download only the latest branch without the entire commit history
+```bash
+git clone --depth 1 --branch $(curl -s https://api.github.com/repos/nlafevers/kosync/releases/latest | grep "tag_name" | cut -d '"' -f 4) https://github.com/nlafevers/kosync.git
+```
+then
+```bash
 go build -o kosync .
 ```
 
