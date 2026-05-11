@@ -17,9 +17,10 @@ KOSYNC is a server that facilitates synchronization of ebooks across your KORead
 6.  [Native Installation](#-native-installation)
 7.  [CLI User Management](#-cli-user-management)
 8.  [Security & Deployment](#-security--deployment)
-9.  [Technical Overview](#-technical-overview)
-10. [Troubleshooting](#-troubleshooting)
-11. [License](#-license)
+9.  [Logging](#-logging)
+10. [Technical Overview](#-technical-overview)
+11. [Troubleshooting](#-troubleshooting)
+12. [License](#-license)
 
 ---
 
@@ -251,6 +252,33 @@ sqlite3 kosync.db ".backup 'kosync_backup.db'"
 
 ---
 
+## 📊 Logging
+
+KOSYNC uses structured `slog` logging to provide an audit trail of system events and user management actions.
+
+### Log Levels
+You can adjust the detail of logs using the `KOSYNC_LOG_LEVEL` environment variable:
+- `debug`: Shows every raw request and database interaction (Best for troubleshooting).
+- `info`: Shows standard startup and access logs (Recommended for production).
+- `warn`/`error`: Only logs problems.
+
+### Unified Logging (Shared Log File)
+Because the server and CLI commands run as separate processes, their logs normally appear in the terminal where they are executed. To unify all logs in a single file, use the `KOSYNC_LOG_PATH` environment variable.
+
+When `KOSYNC_LOG_PATH` is set, logs will be written to **both** the console (stdout) and the specified file.
+
+**Example Usage:**
+```bash
+# Start the server with a log file
+export KOSYNC_LOG_PATH=kosync.log
+./kosync &
+
+# Run CLI commands using the same log path
+KOSYNC_LOG_PATH=kosync.log ./kosync create-user newuser
+```
+
+---
+
 ## 🏗 Technical Overview
 
 KOSYNC is built with a focus on simplicity and extreme efficiency.
@@ -279,10 +307,7 @@ KOSYNC is built with a focus on simplicity and extreme efficiency.
 - **406 Not Acceptable:** KOReader is very picky about headers. Ensure you haven't modified the `AcceptMiddleware`.
 
 ### Configuration & Logs
-You can adjust the detail of logs using `KOSYNC_LOG_LEVEL`:
-- `debug`: Shows every raw request and database interaction (Best for troubleshooting).
-- `info`: Shows standard startup and access logs (Recommended for production).
-- `warn`/`error`: Only logs problems.
+If you encounter issues, the first step is to increase the log verbosity. Set `KOSYNC_LOG_LEVEL=debug` and restart the server. This will provide more context about request headers and database operations.
 
 ### Database Errors
 - **"Database file does not exist":** If using the CLI, ensure the server has been started at least once to create the database, or check your `KOSYNC_DB_PATH` environment variable.
