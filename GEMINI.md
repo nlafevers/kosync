@@ -271,7 +271,13 @@ Missing or incorrectly implemented features from the earlier phases.
   - [x] **8.1.1 Change Password:** Add a `change-password` command.
   - [x] **8.1.2 CLI Format:** Refactor the `create-user`, `delete-user`, and `change-password` commands to take the format `./kosync COMMAND_NAME USERNAME` so there is no need to pass a `-u` flag every time for username.
   - [x] **8.1.3 Refactor Password Input Techniques:** To avoid having the passwords show up in the shell history, implement a hidden, interactive password input emulating the techniques used in KOPDS.  And like in KOPDS, there should be an option to pass an optional flag `--password-stdin` to re-enable non-interactive password entry for automation (for example `echo "mypassword" | docker exec -i kosync ./kosync create-user admin --password-stdin`). Use of `golang.org/x/term` is explicitly allowed to achieve this. Avoid requiring a version of Go later than 1.22.  See below for the code snipper from KOPDS:
-
+  - [ ] **8.1.4 Test Suite for User Management UI:**  Build tests for the user management UI.
+- [ ] **8.2 Project Documentation:** The goal of KOSYNC is to provide a server for home labbers of all experience levels.  The README.md documentation needs to reflect this.  Novices need the basics explained patiently and fully with the exact commands they'll need spelled out for them.  Experts need details about the implementation for debugging and contributing to the project.
+  - [ ] **8.2.1 CLI Usage Guide:** The README.md already contained installation instructions and KOReader usage instructions, but still needs instructions for using the newly build/refactored user management UI.
+  - [ ] **8.2.2 Log Level Explanation:** The log level options need a full explanation.
+  - [ ] **8.2.3 Expand Technical Overview:** The Technical Overview section of the README.md only mentions highlights.  Expand this to give a fuller explanation of how the app was built to work.
+  - [ ] **8.2.4 Expand Troublshooting:** The Troubleshooting section is also very light on detail.  Anticipate common usage and deployment issues and provide solutions.
+  
 -----
 
 ### Phase 9: Database Consistency & Path Resolution
@@ -282,124 +288,4 @@ Ensure the server and CLI always use the same database and prevent accidental fi
 - [x] **9.3 CLI Path Logging:** Update the CLI to explicitly log the database path it is using for transparency.
 
 
-```Go
-func main() {
-	// 1. Load Config
-	cfg, err := config.Load()
-	if err != nil {
-		fmt.Printf("Error loading config: %v\n", err)
-		os.Exit(1)
-	}
 
-	// 2. Initialize Logger
-	log := logger.New(cfg.LogLevel, cfg.JSONLog)
-
-	if len(os.Args) > 1 {
-		switch os.Args[1] {
-		case "create-user":
-			if len(os.Args) < 3 {
-				fmt.Println("Usage: kopds create-user <username> [--password-stdin]")
-				os.Exit(1)
-			}
-			password, err := passwordFromArgs(os.Args[3:], os.Stdin, os.Stdout)
-			if err != nil {
-				fmt.Printf("Failed to read password: %v\n", err)
-				os.Exit(1)
-			}
-			createUser(cfg, os.Args[2], password)
-			return
-		}
-	}
-
-	runServer(cfg, log)
-}
-func createUser(cfg *config.Config, username, password string) {
-	db, err := database.NewSQLite(cfg.DatabasePath)
-	if err != nil {
-		fmt.Printf("Failed to connect to database: %v\n", err)
-		os.Exit(1)
-	}
-	defer db.Close()
-
-	if err := database.Migrate(db); err != nil {
-		fmt.Printf("Failed to run migrations: %v\n", err)
-		os.Exit(1)
-	}
-
-	userRepo := database.NewUserRepository(db)
-	hash, err := api.HashPassword(password)
-	if err != nil {
-		fmt.Printf("Failed to hash password: %v\n", err)
-		os.Exit(1)
-	}
-
-	user := &domain.User{
-		Username: username,
-		Password: hash,
-	}
-
-	if err := userRepo.Save(context.Background(), user); err != nil {
-		fmt.Printf("Failed to save user: %v\n", err)
-		os.Exit(1)
-	}
-
-	fmt.Printf("User '%s' created/updated successfully.\n", username)
-}
-
-func passwordFromArgs(args []string, stdin io.Reader, stdout io.Writer) (string, error) {
-	switch len(args) {
-	case 0:
-		return readPasswordInteractively(stdout)
-	case 1:
-		if args[0] != "--password-stdin" {
-			return "", errors.New("password arguments are not supported; use interactive prompt or --password-stdin")
-		}
-		passwordBytes, err := io.ReadAll(stdin)
-		if err != nil {
-			return "", err
-		}
-		password := strings.TrimRight(string(passwordBytes), "\r\n")
-		if password == "" {
-			return "", errors.New("password cannot be empty")
-		}
-		return password, nil
-	default:
-		return "", errors.New("too many arguments")
-	}
-}
-
-func readPasswordInteractively(stdout io.Writer) (string, error) {
-	if !term.IsTerminal(int(os.Stdin.Fd())) {
-		return "", errors.New("stdin is not a terminal; use --password-stdin for automation")
-	}
-
-	fmt.Fprint(stdout, "Password: ")
-	first, err := term.ReadPassword(int(os.Stdin.Fd()))
-	fmt.Fprintln(stdout)
-	if err != nil {
-		return "", err
-	}
-
-	fmt.Fprint(stdout, "Confirm password: ")
-	second, err := term.ReadPassword(int(os.Stdin.Fd()))
-	fmt.Fprintln(stdout)
-	if err != nil {
-		return "", err
-	}
-
-	if string(first) == "" {
-		return "", errors.New("password cannot be empty")
-	}
-	if string(first) != string(second) {
-		return "", errors.New("passwords do not match")
-	}
-	return string(first), nil
-}
-```
-
-  - [ ] **8.1.4 Test Suite for User Management UI:**  Build tests for the user management UI.
-- [ ] **8.2 Project Documentation:** The goal of KOSYNC is to provide a server for home labbers of all experience levels.  The README.md documentation needs to reflect this.  Novices need the basics explained patiently and fully with the exact commands they'll need spelled out for them.  Experts need details about the implementation for debugging and contributing to the project.
-  - [ ] **8.2.1 CLI Usage Guide:** The README.md already contained installation instructions and KOReader usage instructions, but still needs instructions for using the newly build/refactored user management UI.
-  - [ ] **8.2.2 Log Level Explanation:** The log level options need a full explanation.
-  - [ ] **8.2.3 Expand Technical Overview:** The Technical Overview section of the README.md only mentions highlights.  Expand this to give a fuller explanation of how the app was built to work.
-  - [ ] **8.2.4 Expand Troublshooting:** The Troubleshooting section is also very light on detail.  Anticipate common usage and deployment issues and provide solutions.

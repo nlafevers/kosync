@@ -14,7 +14,7 @@ func TestHandleUserCreate(t *testing.T) {
 	dbPath := "test_handlers_user.db"
 	defer os.Remove(dbPath)
 
-	storage, err := InitDB(dbPath)
+	storage, err := InitDB(dbPath, true)
 	if err != nil {
 		t.Fatalf("failed to init db: %v", err)
 	}
@@ -106,7 +106,7 @@ func TestHandleGetProgress(t *testing.T) {
 	dbPath := "test_handlers_progress.db"
 	defer os.Remove(dbPath)
 
-	storage, err := InitDB(dbPath)
+	storage, err := InitDB(dbPath, true)
 	if err != nil {
 		t.Fatalf("failed to init db: %v", err)
 	}
@@ -163,7 +163,7 @@ func TestHandleUpdateProgress(t *testing.T) {
 	dbPath := "test_handlers_update.db"
 	defer os.Remove(dbPath)
 
-	storage, err := InitDB(dbPath)
+	storage, err := InitDB(dbPath, true)
 	if err != nil {
 		t.Fatalf("failed to init db: %v", err)
 	}
