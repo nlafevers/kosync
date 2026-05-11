@@ -29,6 +29,7 @@ UL2.md
 *.dll
 *.so
 *.dylib
+kosync
 
 # Test binary, built with `go test -c`
 *.test
