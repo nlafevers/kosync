@@ -13,7 +13,7 @@ func TestAuthMiddleware(t *testing.T) {
 	dbPath := "test_middleware_auth.db"
 	defer os.Remove(dbPath)
 
-	storage, err := InitDB(dbPath)
+	storage, err := InitDB(dbPath, true)
 	if err != nil {
 		t.Fatalf("failed to init db: %v", err)
 	}

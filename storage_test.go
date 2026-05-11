@@ -10,7 +10,7 @@ func TestInitDB(t *testing.T) {
 	dbPath := "test_init.db"
 	defer os.Remove(dbPath)
 
-	storage, err := InitDB(dbPath)
+	storage, err := InitDB(dbPath, true)
 	if err != nil {
 		t.Fatalf("failed to init db: %v", err)
 	}
@@ -41,7 +41,7 @@ func TestProgress(t *testing.T) {
 	dbPath := "test_progress.db"
 	defer os.Remove(dbPath)
 
-	storage, err := InitDB(dbPath)
+	storage, err := InitDB(dbPath, true)
 	if err != nil {
 		t.Fatalf("failed to init db: %v", err)
 	}
@@ -120,7 +120,7 @@ func TestUserCRUD(t *testing.T) {
 	dbPath := "test_users.db"
 	defer os.Remove(dbPath)
 
-	storage, err := InitDB(dbPath)
+	storage, err := InitDB(dbPath, true)
 	if err != nil {
 		t.Fatalf("failed to init db: %v", err)
 	}
@@ -171,7 +171,7 @@ func TestStorageCap(t *testing.T) {
 	dbPath := "test_cap.db"
 	defer os.Remove(dbPath)
 
-	storage, err := InitDB(dbPath)
+	storage, err := InitDB(dbPath, true)
 	if err != nil {
 		t.Fatalf("failed to init db: %v", err)
 	}

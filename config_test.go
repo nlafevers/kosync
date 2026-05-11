@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -27,8 +28,9 @@ func TestLoadConfig(t *testing.T) {
 	if cfg.Port != "9999" {
 		t.Errorf("expected port 9999, got %s", cfg.Port)
 	}
-	if cfg.DBPath != "test.db" {
-		t.Errorf("expected db_path test.db, got %s", cfg.DBPath)
+	// DBPath is now resolved to an absolute path if relative
+	if !strings.HasSuffix(cfg.DBPath, "test.db") {
+		t.Errorf("expected db_path to end with test.db, got %s", cfg.DBPath)
 	}
 	if cfg.LogLevel != "debug" {
 		t.Errorf("expected log_level debug, got %s", cfg.LogLevel)
@@ -54,7 +56,7 @@ func TestLoadConfigDefaults(t *testing.T) {
 	if cfg.Port != "8081" {
 		t.Errorf("expected default port 8081, got %s", cfg.Port)
 	}
-	if cfg.DBPath != "kosync.db" {
-		t.Errorf("expected default db_path kosync.db, got %s", cfg.DBPath)
+	if !strings.HasSuffix(cfg.DBPath, "kosync.db") {
+		t.Errorf("expected default db_path to end with kosync.db, got %s", cfg.DBPath)
 	}
 }
