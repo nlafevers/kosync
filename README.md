@@ -15,10 +15,11 @@ KOSYNC is a server that facilitates synchronization of ebooks across your KORead
 4.  [Quick Start (Docker)](#-quick-start-docker)
 5.  [Usage with KOReader](#-usage-with-koreader)
 6.  [Native Installation](#-native-installation)
-7.  [Security & Deployment](#-security--deployment)
-8.  [Technical Overview](#-technical-overview)
-9.  [Troubleshooting](#-troubleshooting)
-10. [License](#-license)
+7.  [CLI User Management](#-cli-user-management)
+8.  [Security & Deployment](#-security--deployment)
+9.  [Technical Overview](#-technical-overview)
+10. [Troubleshooting](#-troubleshooting)
+11. [License](#-license)
 
 ---
 
@@ -134,10 +135,6 @@ docker exec -it kosync ./kosync create-user admin
 ```
 Follow the prompts to set a secure password.
 
-> [!TIP]
-> For automation, you can use the `--password-stdin` flag:
-> `echo "mypassword" | docker exec -i kosync ./kosync create-user admin --password-stdin`
-
 ---
 
 ## 📱 Usage with KOReader
@@ -162,15 +159,8 @@ For users who prefer running KOSYNC without Docker, you can use one of the provi
 ### 1. Build from Source
 ```bash
 git clone https://github.com/nlafevers/kosync.git
-```
-or, to download only the latest branch without the entire commit history
-```bash
-git clone --depth 1 --branch $(curl -s https://api.github.com/repos/nlafevers/kosync/releases/latest | grep "tag_name" | cut -d '"' -f 4) https://github.com/nlafevers/kosync.git
-```
-then
-```bash
 cd kosync
-go build -o kosync ./cmd/kosync
+go build -o kosync .
 ```
 
 ### 2. Configure
@@ -194,6 +184,36 @@ sudo chown kosync:kosync kosync kosync.db
 ### 4. Run the server
 ```bash
 ./kosync
+```
+
+---
+
+## 🖥 CLI User Management
+
+KOSYNC includes a built-in CLI for managing users securely without exposing passwords in your shell history.
+
+### Create a User
+```bash
+./kosync create-user <username>
+```
+You will be prompted to enter and confirm a password. The characters will not be visible.
+
+### Change a Password
+```bash
+./kosync change-password <username>
+```
+Useful for resetting a user's password or regular security updates.
+
+### Delete a User
+```bash
+./kosync delete-user <username>
+```
+This will permanently remove the user and all their reading progress from the database.
+
+### Automated Setup (Non-interactive)
+For Docker initialization or scripts, you can use the `--password-stdin` flag:
+```bash
+echo "mypassword" | ./kosync create-user admin --password-stdin
 ```
 
 ---
@@ -226,16 +246,41 @@ sqlite3 kosync.db ".backup 'kosync_backup.db'"
 ---
 
 ## 🏗 Technical Overview
-- **Architecture:** Clean layered architecture (Middleware -> Handlers -> Storage).
-- **Communication:** Standard Go `net/http` router. Enforces `application/vnd.koreader.v1+json` MIME types.
-- **Security:** Bcrypt (cost 12) for password hashing.
-- **Database:** Pure Go SQLite (`modernc.org/sqlite`) with WAL mode enabled.
+
+KOSYNC is built with a focus on simplicity and extreme efficiency.
+
+### Architecture
+- **Layered Design:** Separates concerns into **Middleware** (Auth/Headers), **Handlers** (API Logic), and **Storage** (SQLite).
+- **Go 1.22+ Standard Library:** Uses the enhanced `net/http` router for performant, dependency-free routing.
+- **Strict Protocol Compliance:** Enforces the custom `application/vnd.koreader.v1+json` MIME type required by the KOReader client.
+
+### Data Integrity & Performance
+- **SQLite WAL Mode:** Enables concurrent reads and writes, preventing "Database is locked" errors while maintaining ACID compliance.
+- **Atomic Operations:** Uses SQL transactions for user deletion to ensure associated reading progress is cleaned up reliably.
+- **Sync Logic:** Implements a "last-writer-wins" strategy based on server-side timestamps to resolve sync conflicts between multiple devices.
+
+### Security Implementation
+- **Password Hashing:** Uses `bcrypt` (cost 12) to secure credentials. Note: KOReader sends an MD5 of the user's password; KOSYNC hashes this MD5 again with bcrypt before storage.
+- **Path Resolution:** The server resolves its database path relative to the executable by default, ensuring consistency even when run from different directories.
+- **Guardrails:** The CLI is forbidden from creating new database files, preventing accidental "ghost" databases if a path is mistyped.
 
 ---
 
 ## ❓ Troubleshooting
-- **Logs:** Run with `KOSYNC_LOG_LEVEL=debug` to see detailed request flows.
-- **Support:** Open an issue if you encounter unexpected behavior.
+
+### Connection Issues
+- **KOReader "Network Error":** Verify your server is reachable from your e-reader's IP. Ensure your firewall (UFW) allows traffic on the configured port.
+- **406 Not Acceptable:** KOReader is very picky about headers. Ensure you haven't modified the `AcceptMiddleware`.
+
+### Configuration & Logs
+You can adjust the detail of logs using `KOSYNC_LOG_LEVEL`:
+- `debug`: Shows every raw request and database interaction (Best for troubleshooting).
+- `info`: Shows standard startup and access logs (Recommended for production).
+- `warn`/`error`: Only logs problems.
+
+### Database Errors
+- **"Database file does not exist":** If using the CLI, ensure the server has been started at least once to create the database, or check your `KOSYNC_DB_PATH` environment variable.
+- **Permission Denied:** Ensure the user running the `kosync` binary has read/write permissions for both the `.db` file and the directory it resides in (for WAL temporary files).
 
 ---
 
