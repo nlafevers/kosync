@@ -286,5 +286,6 @@ Missing or incorrectly implemented features from the earlier phases.
   - [x] **8.4.2 CLI Logging:** Add `slog` calls to `runCLI` for success/failure of `create-user`, `delete-user`, and `change-password`, including a `source: CLI` attribute.
   - [x] **8.4.3 API Logging:** Update `handleUserCreate` in `handlers.go` to include a `source: API` attribute in its log entries.
   - [x] **8.4.4 Verification:** Verify that logs from both sources (CLI and API) correctly identify the source and username in the structured output.
+  - [x] **8.4.5 Shared Log File Support:** Implement `KOSYNC_LOG_PATH` to allow unified logging to a file across separate processes (Server and CLI).
 
 
