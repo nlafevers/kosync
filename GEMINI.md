@@ -277,15 +277,14 @@ Missing or incorrectly implemented features from the earlier phases.
   - [x] **8.2.2 Log Level Explanation:** The log level options need a full explanation.
   - [x] **8.2.3 Expand Technical Overview:** The Technical Overview section of the README.md only mentions highlights.  Expand this to give a fuller explanation of how the app was built to work.
   - [x] **8.2.4 Expand Troublshooting:** The Troubleshooting section is also very light on detail.  Anticipate common usage and deployment issues and provide solutions.
-  
------
-
-### Phase 9: Database Consistency & Path Resolution
-Ensure the server and CLI always use the same database and prevent accidental file creation.
-
-- [x] **9.1 Absolute Path Resolution:** Modify `config.go` to resolve the database path to an absolute path relative to the executable by default.
-- [x] **9.2 Creation Safeguard:** Update `InitDB` to prevent the CLI from creating new database files.
-- [x] **9.3 CLI Path Logging:** Update the CLI to explicitly log the database path it is using for transparency.
-
+- [x] **8.3 Database Consistency & Path Resolution:** Ensure the server and CLI always use the same database and prevent accidental file creation.
+  - [x] **8.3.1 Absolute Path Resolution:** Modify `config.go` to resolve the database path to an absolute path relative to the executable by default.
+  - [x] **8.3.2 Creation Safeguard:** Update `InitDB` to prevent the CLI from creating new database files.
+  - [x] **8.3.3 CLI Path Logging:** Update the CLI to explicitly log the database path it is using for transparency.
+- [x] **8.4 Logging Inconsistency:** When a user is created via an HTTP registration there is an event printed to the log. There is no entry in the log for any CLI user management commands, even when they fail.
+  - [x] **8.4.1 Global Logger Initialization:** Move `InitLogger` to the top of `main()` in `main.go` so it is available to CLI commands.
+  - [x] **8.4.2 CLI Logging:** Add `slog` calls to `runCLI` for success/failure of `create-user`, `delete-user`, and `change-password`, including a `source: CLI` attribute.
+  - [x] **8.4.3 API Logging:** Update `handleUserCreate` in `handlers.go` to include a `source: API` attribute in its log entries.
+  - [x] **8.4.4 Verification:** Verify that logs from both sources (CLI and API) correctly identify the source and username in the structured output.
 
 
