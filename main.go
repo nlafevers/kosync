@@ -17,7 +17,7 @@ import (
 
 func main() {
 	config := LoadConfig()
-	InitLogger(config.LogLevel)
+	InitLogger(config.LogLevel, config.LogPath)
 
 	// Handle CLI commands
 	if len(os.Args) > 1 {
