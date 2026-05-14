@@ -165,6 +165,12 @@ func TestUserCRUD(t *testing.T) {
 	if err != sql.ErrNoRows {
 		t.Errorf("expected sql.ErrNoRows after delete, got %v", err)
 	}
+
+	// Test deleting non-existent user
+	err = storage.DeleteUser("nonexistent")
+	if err == nil || err.Error() != "user not found" {
+		t.Errorf("expected 'user not found' error for non-existent user, got %v", err)
+	}
 }
 
 func TestStorageCap(t *testing.T) {

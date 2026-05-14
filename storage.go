@@ -161,8 +161,17 @@ func (s *Storage) DeleteUser(username string) error {
 	if _, err := tx.Exec("DELETE FROM progress WHERE username = ?", username); err != nil {
 		return err
 	}
-	if _, err := tx.Exec("DELETE FROM users WHERE username = ?", username); err != nil {
+	res, err := tx.Exec("DELETE FROM users WHERE username = ?", username)
+	if err != nil {
 		return err
+	}
+
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return fmt.Errorf("user not found")
 	}
 
 	return tx.Commit()
