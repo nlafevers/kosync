@@ -98,6 +98,17 @@ func TestCLIUserManagement(t *testing.T) {
 		}
 	})
 
+	t.Run("Delete Non-Existent User", func(t *testing.T) {
+		cmd := exec.Command(exe, "delete-user", "noone")
+		output, err := cmd.CombinedOutput()
+		if err == nil {
+			t.Error("expected failure for non-existent user, but it succeeded")
+		}
+		if !bytes.Contains(output, []byte("Error: user not found")) {
+			t.Errorf("expected 'Error: user not found', got: %s", output)
+		}
+	})
+
 	t.Run("DB Guard", func(t *testing.T) {
 		os.Remove(dbPath)
 		cmd := exec.Command(exe, "delete-user", "noone")
