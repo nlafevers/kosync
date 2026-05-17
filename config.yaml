@@ -1,0 +1,7 @@
+# KOSYNC Configuration
+port: 8081
+db_path: ./data/kosync.db
+log_level: info
+log_path: ""
+disable_registration: false
+storage_cap_mb: 0
