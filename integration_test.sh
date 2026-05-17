@@ -11,7 +11,7 @@ PASS="testpass"
 DOC="doc123"
 
 # Start server in background
-go build -o kosync .
+go build -o kosync ./cmd/kosync
 ./kosync &
 PID=$!
 trap "kill $PID; rm -f $DB" EXIT
