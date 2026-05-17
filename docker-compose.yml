@@ -1,0 +1,20 @@
+services:
+  kosync:
+    image: ghcr.io/nlafevers/kosync:latest # or build: .
+    container_name: kosync
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    read_only: true
+    tmpfs:
+      - /tmp
+    volumes:
+      - kosync_data:/data
+    environment:
+      - KOSYNC_PORT=8081
+      - KOSYNC_DB_PATH=/data/kosync.db
+      - KOSYNC_LOG_LEVEL=info
+      - KOSYNC_DISABLE_REGISTRATION=false
+
+volumes:
+  kosync_data:
