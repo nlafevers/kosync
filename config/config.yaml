@@ -1,4 +1,3 @@
-# KOSYNC Configuration
 port: 8081
 db_path: ./data/kosync.db
 log_level: info
