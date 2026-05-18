@@ -170,16 +170,18 @@ then
 go build -o kosync .
 ```
 
-### 2. Configure
-KOSYNC can be configured via environment variables. 
+## ⚙️ Configuration Reference
 
-```bash
-# Set required environment variables
-export KOSYNC_PORT=8081 \
-       KOSYNC_DB_PATH=/app/data/kosync.db \
-       KOSYNC_LOG_LEVEL=info \
-       KOSYNC_DISABLE_REGISTRATION=false
-```
+All settings can be provided as environment variables (prefixed with `KOSYNC_`).
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `KOSYNC_PORT` | The port the server listens on. | `8081` |
+| `KOSYNC_DB_PATH` | Path where the database file will be stored. | `kosync.db` |
+| `KOSYNC_LOG_LEVEL` | Logging verbosity (`debug`, `info`, `warn`, `error`). | `info` |
+| `KOSYNC_LOG_PATH` | File path for unified logging. | - |
+| `KOSYNC_DISABLE_REGISTRATION` | Disable user registration endpoints. | `false` |
+| `KOSYNC_STORAGE_CAP_MB` | Maximum database size in MB (0 to disable). | `0` |
 
 ### 3. Run as non-root user
 Create a dedicated user to run the service securely.
