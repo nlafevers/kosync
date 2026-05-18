@@ -16,6 +16,10 @@ type Storage struct {
 
 func InitDB(path string, allowCreate bool) (*Storage, error) {
 	// 2.1 Security: Ensure the database file is handled with 0600 permissions.
+	if err := os.MkdirAll(filepath.Dir(path), 0750); err != nil {
+		return nil, fmt.Errorf("failed to create directory for db: %w", err)
+	}
+
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		if !allowCreate {
 			return nil, fmt.Errorf("database file does not exist: %s", path)
