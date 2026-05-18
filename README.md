@@ -97,7 +97,7 @@ mkdir ~/kosync && cd ~/kosync
 ```
 
 ### 2. Create Docker Compose File
-Create a file named `docker-compose.yml` and paste the following content.
+Create a file named `deploy/docker-compose.yml` and paste the following content.
 
 ```yaml
 services:

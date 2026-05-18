@@ -1,6 +1,9 @@
 services:
   kosync:
-    image: ghcr.io/nlafevers/kosync:latest # or build: .
+    build:
+      context: ..
+      dockerfile: build/Dockerfile
+    image: ghcr.io/nlafevers/kosync:latest
     container_name: kosync
     restart: unless-stopped
     ports:
