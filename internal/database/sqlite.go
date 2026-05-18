@@ -16,11 +16,13 @@ type Storage struct {
 }
 
 func InitDB(path string, allowCreate bool) (*Storage, error) {
-	// 2.1 Security: Ensure the database file is handled with 0600 permissions.
-	if err := os.MkdirAll(filepath.Dir(path), 0750); err != nil {
-		return nil, fmt.Errorf("failed to create directory for db: %w", err)
+	// Ensure the parent directory of the database file exists.
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0750); err != nil {
+		return nil, fmt.Errorf("failed to create database directory: %w", err)
 	}
 
+	// 2.1 Security: Ensure the database file is handled with 0600 permissions.
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		if !allowCreate {
 			return nil, fmt.Errorf("database file does not exist: %s", path)
@@ -43,7 +45,7 @@ func InitDB(path string, allowCreate bool) (*Storage, error) {
 	}
 
 	// 2.1 Security: Enable WAL mode and set SetMaxOpenConns(1)
-	if _, err := db.Exec("PRAGMA journal_mode=WAL;"); err != nil {
+	if _, err := db.Exec("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;"); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("failed to enable WAL: %w", err)
 	}
