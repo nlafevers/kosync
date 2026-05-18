@@ -24,7 +24,7 @@ func Load() (*Config, error) {
 	viper.AddConfigPath("./config")
 
 	viper.SetDefault("port", "8081")
-	viper.SetDefault("db_path", "kosync.db")
+	viper.SetDefault("db_path", "data/kosync.db")
 	viper.SetDefault("log_level", "info")
 	viper.SetDefault("log_path", "")
 	viper.SetDefault("disable_registration", false)
