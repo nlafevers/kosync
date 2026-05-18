@@ -59,7 +59,7 @@ func main() {
 	protected := http.NewServeMux()
 	protected.HandleFunc("GET /users/auth", api.HandleAuth)
 	protected.HandleFunc("GET /syncs/progress/{document}", api.HandleGetProgress(storage))
-	protected.HandleFunc("PUT /syncs/progress", api.HandleUpdateProgress(storage))
+	protected.HandleFunc("PUT /syncs/progress", api.HandleUpdateProgress(storage, cfg))
 
 	// Middleware chaining
 	var handler http.Handler = protected
