@@ -116,9 +116,11 @@ services:
          - kosync_data:/app/data
       environment:
       - KOSYNC_PORT=8081
-      - KOSYNC_DB_PATH=/app/data/kosync.db
+      - KOSYNC_DATABASE_PATH=/app/data/kosync.db
       - KOSYNC_LOG_LEVEL=info
+      - KOSYNC_JSON_LOG=true
       - KOSYNC_DISABLE_REGISTRATION=false
+      - KOSYNC_STORAGE_CAP_MB=0
 volumes:
 kosync_data:
 ```
@@ -177,8 +179,9 @@ All settings can be provided as environment variables (prefixed with `KOSYNC_`).
 | Variable | Description | Default |
 | :--- | :--- | :--- |
 | `KOSYNC_PORT` | The port the server listens on. | `8081` |
-| `KOSYNC_DB_PATH` | Path where the database file will be stored. | `kosync.db` |
+| `KOSYNC_DATABASE_PATH` | Path where the database file will be stored. `KOSYNC_DB_PATH` remains supported as a legacy alias. | `./data/kosync.db` |
 | `KOSYNC_LOG_LEVEL` | Logging verbosity (`debug`, `info`, `warn`, `error`). | `info` |
+| `KOSYNC_JSON_LOG` | Enable structured JSON logging (best for Docker and log aggregators). | `false` |
 | `KOSYNC_LOG_PATH` | File path for unified logging. | - |
 | `KOSYNC_DISABLE_REGISTRATION` | Disable user registration endpoints. | `false` |
 | `KOSYNC_STORAGE_CAP_MB` | Maximum database size in MB (0 to disable). | `0` |
@@ -205,7 +208,7 @@ KOSYNC includes a built-in CLI for managing users securely without exposing pass
 ```bash
 ./kosync create-user <username>
 ```
-You will be prompted to enter and confirm a password. The characters will not be visible.
+You will be prompted to enter and confirm a password. The characters will not be visible. If the user already exists, the password is updated.
 
 ### Change a Password
 ```bash
@@ -224,6 +227,8 @@ For Docker initialization or scripts, you can use the `--password-stdin` flag:
 ```bash
 echo "mypassword" | ./kosync create-user admin --password-stdin
 ```
+
+User-management commands create and migrate the configured database automatically, so initial setup can create the first user before the server has been started.
 
 ---
 
@@ -298,7 +303,7 @@ KOSYNC is built with a focus on simplicity and extreme efficiency.
 ### Security Implementation
 - **Password Hashing:** Uses `bcrypt` (cost 12) to secure credentials. Note: KOReader sends an MD5 of the user's password; KOSYNC hashes this MD5 again with bcrypt before storage.
 - **Path Resolution:** The server resolves its database path relative to the executable by default, ensuring consistency even when run from different directories.
-- **Guardrails:** The CLI is forbidden from creating new database files, preventing accidental "ghost" databases if a path is mistyped.
+- **CLI Database Setup:** User-management commands create and migrate the configured database automatically, matching KOPDS behavior.
 
 ---
 
@@ -312,7 +317,7 @@ KOSYNC is built with a focus on simplicity and extreme efficiency.
 If you encounter issues, the first step is to increase the log verbosity. Set `KOSYNC_LOG_LEVEL=debug` and restart the server. This will provide more context about request headers and database operations.
 
 ### Database Errors
-- **"Database file does not exist":** If using the CLI, ensure the server has been started at least once to create the database, or check your `KOSYNC_DB_PATH` environment variable.
+- **Unexpected database path:** Check `KOSYNC_DATABASE_PATH`; `KOSYNC_DB_PATH` is still accepted as a legacy alias.
 - **Permission Denied:** Ensure the user running the `kosync` binary has read/write permissions for both the `.db` file and the directory it resides in (for WAL temporary files).
 
 ---
