@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+// New initializes a new logger using slog.
 func New(level string, json bool, logPath string) *slog.Logger {
 	var slogLevel slog.Level
 	switch strings.ToLower(level) {
@@ -23,20 +24,24 @@ func New(level string, json bool, logPath string) *slog.Logger {
 		slogLevel = slog.LevelInfo
 	}
 
-	var output io.Writer = os.Stdout
+	var output io.Writer = os.Stderr
 
 	if logPath != "" {
 		file, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to open log file: %v\n", err)
 		} else {
-			output = io.MultiWriter(os.Stdout, file)
+			output = io.MultiWriter(os.Stderr, file)
 		}
 	}
 
-	handler := slog.NewTextHandler(output, &slog.HandlerOptions{
-		Level: slogLevel,
-	})
+	var handler slog.Handler
+	if json {
+		handler = slog.NewJSONHandler(output, &slog.HandlerOptions{Level: slogLevel})
+	} else {
+		handler = slog.NewTextHandler(output, &slog.HandlerOptions{Level: slogLevel})
+	}
+
 	logger := slog.New(handler)
 	slog.SetDefault(logger)
 	return logger
