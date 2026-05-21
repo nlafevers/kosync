@@ -15,6 +15,47 @@ type Storage struct {
 	db *sql.DB
 }
 
+func OpenSQLite(path string, allowCreate bool) (*sql.DB, error) {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0750); err != nil {
+		return nil, fmt.Errorf("failed to create database directory: %w", err)
+	}
+
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		if !allowCreate {
+			return nil, fmt.Errorf("database file does not exist: %s", path)
+		}
+		file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0600)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create db file with 0600: %w", err)
+		}
+		file.Close()
+	} else if err == nil {
+		if err := os.Chmod(path, 0600); err != nil {
+			return nil, fmt.Errorf("failed to chmod 0600 on existing db file: %w", err)
+		}
+	}
+
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open database: %w", err)
+	}
+
+	if _, err := db.Exec("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;"); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("failed to enable WAL: %w", err)
+	}
+
+	db.SetMaxOpenConns(1)
+
+	if err := db.Ping(); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("failed to ping database: %w", err)
+	}
+
+	return db, nil
+}
+
 func InitDB(path string, allowCreate bool) (*Storage, error) {
 	// Ensure the parent directory of the database file exists.
 	dir := filepath.Dir(path)
