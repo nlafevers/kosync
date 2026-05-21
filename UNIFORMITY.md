@@ -4,8 +4,18 @@ This project is being refactored alongside its sibling project so equivalent beh
 
 ## Currently Identical Functions
 
+- `runCLI`
+- `printUsage`
 - `passwordFromArgs`
 - `readPasswordInteractively`
+- `HashPassword`
+- `CheckPassword`
+- `logger.New`
+- `OpenSQLite`
+- `EnforceStorageCap`
+- `vacuum`
+- `resolveExecutablePaths`
+- `resolvePath`
 
 ## High-Confidence Standardization Targets
 
@@ -22,3 +32,10 @@ This project is being refactored alongside its sibling project so equivalent beh
 - KOPDS owns OPDS catalog, Calibre scanner, image cache, book repository, and link-generation behavior.
 - KOSYNC owns KOReader sync protocol handlers, progress storage, registration, and header authentication behavior.
 - Database schemas may differ when the stored domain differs, but shared lifecycle helpers should remain identical.
+
+## Final Audit Notes
+
+- `pruneStorageCapRecords` intentionally differs because KOPDS prunes catalog sync-state rows while KOSYNC prunes progress rows.
+- `config.Load` intentionally differs because each project has different domain settings; shared path-resolution helpers remain identical.
+- KOPDS has a repository-level `EnforceStorageCap` adapter to satisfy the book repository interface; KOSYNC calls storage directly.
+- Similarity matches involving unrelated `Close` methods are false positives and are not uniformity targets.
