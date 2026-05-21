@@ -17,7 +17,9 @@ services:
       - KOSYNC_PORT=8081
       - KOSYNC_DB_PATH=/data/kosync.db
       - KOSYNC_LOG_LEVEL=info
+      - KOSYNC_JSON_LOG=true # Recommended for Docker
       - KOSYNC_DISABLE_REGISTRATION=false
+      - KOSYNC_STORAGE_CAP_MB=0
 
 volumes:
   kosync_data:
