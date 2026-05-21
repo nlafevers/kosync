@@ -21,6 +21,8 @@ import (
 	"golang.org/x/term"
 )
 
+const appName = "kosync"
+
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
@@ -100,82 +102,41 @@ func runCLI(cfg *config.Config) {
 	command := os.Args[1]
 
 	switch command {
-	case "create-user", "delete-user", "change-password":
+	case "create-user":
 		if len(os.Args) < 3 {
-			fmt.Fprintf(os.Stderr, "Usage: kosync %s <username> [--password-stdin]\n", command)
+			fmt.Printf("Usage: %s %s <username> [--password-stdin]\n", appName, command)
 			os.Exit(1)
 		}
 		username := os.Args[2]
-
-		fmt.Printf("Using database: %s\n", cfg.DatabasePath)
-		if cfg.LogPath != "" {
-			fmt.Printf("Using log:      %s\n", cfg.LogPath)
-		} else {
-			fmt.Printf("Using log:      No log file specified (logging to stdout only)\n")
-		}
-
-		storage, err := database.InitDB(cfg.DatabasePath, true)
+		password, err := passwordFromArgs(os.Args[3:], os.Stdin, os.Stdout)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			slog.Error("failed to read password", "username", username, "source", "CLI", "error", err)
+			fmt.Printf("Failed to read password: %v\n", err)
 			os.Exit(1)
 		}
-		defer storage.Close()
-
-		switch command {
-		case "create-user":
-			password, err := passwordFromArgs(os.Args[3:], os.Stdin, os.Stdout)
-			if err != nil {
-				slog.Error("failed to read password", "username", username, "source", "CLI", "error", err)
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
-			}
-			hash, err := api.HashPassword(password)
-			if err != nil {
-				slog.Error("failed to hash password", "username", username, "source", "CLI", "error", err)
-				fmt.Fprintf(os.Stderr, "Error: failed to hash password: %v\n", err)
-				os.Exit(1)
-			}
-			if err := storage.CreateUser(username, hash); err != nil {
-				slog.Error("failed to create user", "username", username, "source", "CLI", "error", err)
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
-			}
-			slog.Info("user created successfully", "username", username, "source", "CLI")
-			fmt.Printf("User '%s' created successfully\n", username)
-
-		case "delete-user":
-			if err := storage.DeleteUser(username); err != nil {
-				slog.Error("failed to delete user", "username", username, "source", "CLI", "error", err)
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
-			}
-			slog.Info("user deleted successfully", "username", username, "source", "CLI")
-			fmt.Printf("User '%s' deleted successfully\n", username)
-
-		case "change-password":
-			password, err := passwordFromArgs(os.Args[3:], os.Stdin, os.Stdout)
-			if err != nil {
-				slog.Error("failed to read password", "username", username, "source", "CLI", "error", err)
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
-			}
-			hash, err := api.HashPassword(password)
-			if err != nil {
-				slog.Error("failed to hash password", "username", username, "source", "CLI", "error", err)
-				fmt.Fprintf(os.Stderr, "Error: failed to hash password: %v\n", err)
-				os.Exit(1)
-			}
-			if err := storage.UpdateUserPassword(username, hash); err != nil {
-				slog.Error("failed to update user password", "username", username, "source", "CLI", "error", err)
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
-			}
-			slog.Info("user password updated successfully", "username", username, "source", "CLI")
-			fmt.Printf("Password for user '%s' updated successfully\n", username)
+		createUser(cfg, username, password)
+	case "delete-user":
+		if len(os.Args) < 3 {
+			fmt.Printf("Usage: %s %s <username>\n", appName, command)
+			os.Exit(1)
 		}
-
+		username := os.Args[2]
+		deleteUser(cfg, username)
+	case "change-password":
+		if len(os.Args) < 3 {
+			fmt.Printf("Usage: %s %s <username> [--password-stdin]\n", appName, command)
+			os.Exit(1)
+		}
+		username := os.Args[2]
+		password, err := passwordFromArgs(os.Args[3:], os.Stdin, os.Stdout)
+		if err != nil {
+			slog.Error("failed to read password", "username", username, "source", "CLI", "error", err)
+			fmt.Printf("Failed to read password: %v\n", err)
+			os.Exit(1)
+		}
+		changePassword(cfg, username, password)
 	default:
-		fmt.Fprintf(os.Stderr, "Unknown command: %s\n", command)
+		fmt.Printf("Unknown command: %s\n", command)
 		printUsage()
 		os.Exit(1)
 	}
@@ -183,12 +144,79 @@ func runCLI(cfg *config.Config) {
 
 func printUsage() {
 	fmt.Println("Usage:")
-	fmt.Println("  kosync                          Run the server")
-	fmt.Println("  kosync create-user <username>   Create a new user")
-	fmt.Println("  kosync delete-user <username>   Delete a user")
-	fmt.Println("  kosync change-password <user>   Change a user's password")
+	fmt.Printf("  %s                          Run the server\n", appName)
+	fmt.Printf("  %s create-user <username>   Create a new user\n", appName)
+	fmt.Printf("  %s delete-user <username>   Delete a user\n", appName)
+	fmt.Printf("  %s change-password <user>   Change a user's password\n", appName)
 	fmt.Println("\nOptions for user commands:")
 	fmt.Println("  --password-stdin                Read password from stdin")
+}
+
+func createUser(cfg *config.Config, username, password string) {
+	storage := openCLIStorage(cfg)
+	defer storage.Close()
+
+	hash, err := api.HashPassword(password)
+	if err != nil {
+		slog.Error("failed to hash password", "username", username, "source", "CLI", "error", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to hash password: %v\n", err)
+		os.Exit(1)
+	}
+	if err := storage.CreateUser(username, hash); err != nil {
+		slog.Error("failed to create user", "username", username, "source", "CLI", "error", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+	slog.Info("user created successfully", "username", username, "source", "CLI")
+	fmt.Printf("User '%s' created successfully\n", username)
+}
+
+func deleteUser(cfg *config.Config, username string) {
+	storage := openCLIStorage(cfg)
+	defer storage.Close()
+
+	if err := storage.DeleteUser(username); err != nil {
+		slog.Error("failed to delete user", "username", username, "source", "CLI", "error", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+	slog.Info("user deleted successfully", "username", username, "source", "CLI")
+	fmt.Printf("User '%s' deleted successfully\n", username)
+}
+
+func changePassword(cfg *config.Config, username, password string) {
+	storage := openCLIStorage(cfg)
+	defer storage.Close()
+
+	hash, err := api.HashPassword(password)
+	if err != nil {
+		slog.Error("failed to hash password", "username", username, "source", "CLI", "error", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to hash password: %v\n", err)
+		os.Exit(1)
+	}
+	if err := storage.UpdateUserPassword(username, hash); err != nil {
+		slog.Error("failed to update user password", "username", username, "source", "CLI", "error", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+	slog.Info("user password updated successfully", "username", username, "source", "CLI")
+	fmt.Printf("Password for user '%s' updated successfully\n", username)
+}
+
+func openCLIStorage(cfg *config.Config) *database.Storage {
+	fmt.Printf("Using database: %s\n", cfg.DatabasePath)
+	if cfg.LogPath != "" {
+		fmt.Printf("Using log:      %s\n", cfg.LogPath)
+	} else {
+		fmt.Printf("Using log:      No log file specified (logging to stdout only)\n")
+	}
+
+	storage, err := database.InitDB(cfg.DatabasePath, true)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+	return storage
 }
 
 func passwordFromArgs(args []string, stdin io.Reader, stdout io.Writer) (string, error) {
