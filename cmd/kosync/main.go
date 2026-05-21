@@ -162,7 +162,7 @@ func createUser(cfg *config.Config, username, password string) {
 		fmt.Printf("Failed to hash password: %v\n", err)
 		os.Exit(1)
 	}
-	if err := storage.CreateUser(username, hash); err != nil {
+	if err := storage.SaveUser(username, hash); err != nil {
 		slog.Error("failed to create user", "username", username, "source", "CLI", "error", err)
 		fmt.Printf("Failed to save user: %v\n", err)
 		os.Exit(1)

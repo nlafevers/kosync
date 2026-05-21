@@ -72,6 +72,26 @@ func TestCLIUserManagement(t *testing.T) {
 		}
 	})
 
+	t.Run("Create Existing User Updates Password", func(t *testing.T) {
+		cmd := exec.Command(exe, "create-user", "clitest", "--password-stdin")
+		cmd.Stdin = bytes.NewBufferString("upsertpass\n")
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("create existing user failed: %v, output: %s", err, output)
+		}
+
+		if !bytes.Contains(output, []byte("User 'clitest' created/updated successfully.")) {
+			t.Errorf("unexpected output: %s", output)
+		}
+
+		s, _ := database.InitDB(dbPath, false)
+		defer s.Close()
+		hash, _ := s.GetUserHash("clitest")
+		if !api.CheckPassword(hash, "upsertpass") {
+			t.Error("create existing user did not update password")
+		}
+	})
+
 	t.Run("Delete User", func(t *testing.T) {
 		cmd := exec.Command(exe, "delete-user", "clitest")
 		output, err := cmd.CombinedOutput()
