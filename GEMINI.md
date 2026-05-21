@@ -2,6 +2,10 @@
 
 KOSYNC is a lightweight server designed to facilitate synchronization of ebooks across all of a user's KOReader devices.  KOReader essentially treats the server as a remote key-value store, so the main task is building a simple CRUD (Create, Read, Update, Delete) API.  There is an official KOReader Sync Server that ships with KOReader, but it has a number of drawbacks.  The intended audience for KOSYNC is home labbers, who may be trying to self-host on very resource constrained hardware.  The code and the README needs to be very well documented to assist novices understand how it works and how to deploy  and troubleshoot it.
 
+## Cross-Project Uniformity
+
+KOSYNC is maintained alongside KOPDS with a maximum-uniformity goal. Functions that perform the same job in both repositories should use the same names and identical code wherever practical. See `UNIFORMITY.md` for the current inventory and boundaries. Keep CLI user management, password helpers, logger construction, config path resolution, SQLite opening, and storage-cap helper flow aligned unless a documented project-specific domain difference requires divergence.
+
 ## Project Overview
 
 - **Core Technologies:**
@@ -289,4 +293,3 @@ Missing or incorrectly implemented features from the earlier phases.
   - [x] **8.4.5 Shared Log File Support:** Implement `KOSYNC_LOG_PATH` to allow unified logging to a file across separate processes (Server and CLI).
   - [x] **8.4.6 Automatic Log Discovery:** Implement automatic detection of `kosync.log` in the application directory to simplify CLI usage and ensure unified logging by default.
   - [x] **8.4.7 delete-user Responses:** `delete-user` incorrectly responds and logs success when non-existent users are deleted, or the same user is deleted repeatedly.
-
