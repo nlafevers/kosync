@@ -55,6 +55,10 @@ func main() {
 	mux := http.NewServeMux()
 
 	// Public routes
+	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
 	mux.HandleFunc("POST /users/create", api.HandleUserCreate(storage, cfg))
 
 	// Protected routes

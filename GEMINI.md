@@ -232,6 +232,7 @@ Map the four specific requests identified during reverse engineering.  Handle an
 Stitch everything into the main entry point using Go 1.22's enhanced `net/http` router.
 
 - [x] **5.1 Route Registration:** 
+  - `mux.HandleFunc("GET /health", handleHealth)` (Uniform with KOPDS)
   - `mux.HandleFunc("POST /users/create", handleUserCreate)`
   - `mux.HandleFunc("GET /users/auth", handleAuth)`
   - `mux.HandleFunc("GET /syncs/progress/{document}", handleGetProgress)`
