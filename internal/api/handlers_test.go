@@ -138,8 +138,9 @@ func TestHandleGetProgress(t *testing.T) {
 }
 
 func TestHandleUpdateProgress(t *testing.T) {
-	storage, _ := setupTestDB(t)
+	storage, dbPath := setupTestDB(t)
 	defer storage.Close()
+	cfg := &config.Config{DBPath: dbPath, StorageCapMB: 0}
 
 	t.Run("Success", func(t *testing.T) {
 		p := models.Progress{Document: "doc2", Percentage: 0.8}
@@ -148,7 +149,7 @@ func TestHandleUpdateProgress(t *testing.T) {
 		req.Header.Set("X-AUTH-USER", "testuser")
 		w := httptest.NewRecorder()
 
-		handler := HandleUpdateProgress(storage)
+		handler := HandleUpdateProgress(storage, cfg)
 		handler.ServeHTTP(w, req)
 
 		if w.Code != http.StatusOK {
@@ -168,7 +169,7 @@ func TestHandleUpdateProgress(t *testing.T) {
 		req := httptest.NewRequest("PUT", "/syncs/progress", bytes.NewBuffer(reqBody))
 		w := httptest.NewRecorder()
 
-		handler := HandleUpdateProgress(storage)
+		handler := HandleUpdateProgress(storage, cfg)
 		handler.ServeHTTP(w, req)
 
 		if w.Code != http.StatusBadRequest {
