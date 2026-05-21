@@ -28,13 +28,6 @@ func TestCLIUserManagement(t *testing.T) {
 
 	// 2. Test create-user (non-interactive)
 	t.Run("Create User", func(t *testing.T) {
-		// First, we need the DB to exist since CLI doesn't create it.
-		s, err := database.InitDB(dbPath, true)
-		if err != nil {
-			t.Fatalf("failed to create db: %v", err)
-		}
-		s.Close()
-
 		cmd := exec.Command(exe, "create-user", "clitest", "--password-stdin")
 		cmd.Stdin = bytes.NewBufferString("clipass\n")
 		output, err := cmd.CombinedOutput()
@@ -47,7 +40,7 @@ func TestCLIUserManagement(t *testing.T) {
 		}
 
 		// Verify in DB
-		s, _ = database.InitDB(dbPath, false)
+		s, _ := database.InitDB(dbPath, false)
 		defer s.Close()
 		hash, err := s.GetUserHash("clitest")
 		if err != nil {
@@ -110,15 +103,18 @@ func TestCLIUserManagement(t *testing.T) {
 		}
 	})
 
-	t.Run("DB Guard", func(t *testing.T) {
+	t.Run("Missing DB Is Created", func(t *testing.T) {
 		os.Remove(dbPath)
 		cmd := exec.Command(exe, "delete-user", "noone")
 		output, err := cmd.CombinedOutput()
 		if err == nil {
-			t.Error("expected failure for non-existent db, but it succeeded")
+			t.Error("expected failure for non-existent user, but it succeeded")
 		}
-		if !bytes.Contains(output, []byte("database file does not exist")) {
-			t.Errorf("expected 'database file does not exist' error, got: %s", output)
+		if !bytes.Contains(output, []byte("Error: user not found")) {
+			t.Errorf("expected 'Error: user not found', got: %s", output)
+		}
+		if _, err := os.Stat(dbPath); err != nil {
+			t.Errorf("expected CLI to create database, got: %v", err)
 		}
 	})
 }

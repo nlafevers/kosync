@@ -114,7 +114,7 @@ func runCLI(cfg *config.Config) {
 			fmt.Printf("Using log:      No log file specified (logging to stdout only)\n")
 		}
 
-		storage, err := database.InitDB(cfg.DatabasePath, false)
+		storage, err := database.InitDB(cfg.DatabasePath, true)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
