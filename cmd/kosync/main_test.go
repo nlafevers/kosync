@@ -35,7 +35,7 @@ func TestCLIUserManagement(t *testing.T) {
 			t.Fatalf("create-user failed: %v, output: %s", err, output)
 		}
 
-		if !bytes.Contains(output, []byte("User 'clitest' created successfully")) {
+		if !bytes.Contains(output, []byte("User 'clitest' created/updated successfully.")) {
 			t.Errorf("unexpected output: %s", output)
 		}
 
@@ -59,7 +59,7 @@ func TestCLIUserManagement(t *testing.T) {
 			t.Fatalf("change-password failed: %v, output: %s", err, output)
 		}
 
-		if !bytes.Contains(output, []byte("Password for user 'clitest' updated successfully")) {
+		if !bytes.Contains(output, []byte("Password for user 'clitest' updated successfully.")) {
 			t.Errorf("unexpected output: %s", output)
 		}
 
@@ -79,7 +79,7 @@ func TestCLIUserManagement(t *testing.T) {
 			t.Fatalf("delete-user failed: %v, output: %s", err, output)
 		}
 
-		if !bytes.Contains(output, []byte("User 'clitest' deleted successfully")) {
+		if !bytes.Contains(output, []byte("User 'clitest' deleted successfully.")) {
 			t.Errorf("unexpected output: %s", output)
 		}
 
@@ -98,8 +98,8 @@ func TestCLIUserManagement(t *testing.T) {
 		if err == nil {
 			t.Error("expected failure for non-existent user, but it succeeded")
 		}
-		if !bytes.Contains(output, []byte("Error: user not found")) {
-			t.Errorf("expected 'Error: user not found', got: %s", output)
+		if !bytes.Contains(output, []byte("Failed to delete user: user not found")) {
+			t.Errorf("expected 'Failed to delete user: user not found', got: %s", output)
 		}
 	})
 
@@ -110,8 +110,8 @@ func TestCLIUserManagement(t *testing.T) {
 		if err == nil {
 			t.Error("expected failure for non-existent user, but it succeeded")
 		}
-		if !bytes.Contains(output, []byte("Error: user not found")) {
-			t.Errorf("expected 'Error: user not found', got: %s", output)
+		if !bytes.Contains(output, []byte("Failed to delete user: user not found")) {
+			t.Errorf("expected 'Failed to delete user: user not found', got: %s", output)
 		}
 		if _, err := os.Stat(dbPath); err != nil {
 			t.Errorf("expected CLI to create database, got: %v", err)

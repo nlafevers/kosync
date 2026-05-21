@@ -159,16 +159,16 @@ func createUser(cfg *config.Config, username, password string) {
 	hash, err := api.HashPassword(password)
 	if err != nil {
 		slog.Error("failed to hash password", "username", username, "source", "CLI", "error", err)
-		fmt.Fprintf(os.Stderr, "Error: failed to hash password: %v\n", err)
+		fmt.Printf("Failed to hash password: %v\n", err)
 		os.Exit(1)
 	}
 	if err := storage.CreateUser(username, hash); err != nil {
 		slog.Error("failed to create user", "username", username, "source", "CLI", "error", err)
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		fmt.Printf("Failed to save user: %v\n", err)
 		os.Exit(1)
 	}
 	slog.Info("user created successfully", "username", username, "source", "CLI")
-	fmt.Printf("User '%s' created successfully\n", username)
+	fmt.Printf("User '%s' created/updated successfully.\n", username)
 }
 
 func deleteUser(cfg *config.Config, username string) {
@@ -177,11 +177,11 @@ func deleteUser(cfg *config.Config, username string) {
 
 	if err := storage.DeleteUser(username); err != nil {
 		slog.Error("failed to delete user", "username", username, "source", "CLI", "error", err)
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		fmt.Printf("Failed to delete user: %v\n", err)
 		os.Exit(1)
 	}
 	slog.Info("user deleted successfully", "username", username, "source", "CLI")
-	fmt.Printf("User '%s' deleted successfully\n", username)
+	fmt.Printf("User '%s' deleted successfully.\n", username)
 }
 
 func changePassword(cfg *config.Config, username, password string) {
@@ -191,29 +191,22 @@ func changePassword(cfg *config.Config, username, password string) {
 	hash, err := api.HashPassword(password)
 	if err != nil {
 		slog.Error("failed to hash password", "username", username, "source", "CLI", "error", err)
-		fmt.Fprintf(os.Stderr, "Error: failed to hash password: %v\n", err)
+		fmt.Printf("Failed to hash password: %v\n", err)
 		os.Exit(1)
 	}
 	if err := storage.UpdateUserPassword(username, hash); err != nil {
 		slog.Error("failed to update user password", "username", username, "source", "CLI", "error", err)
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		fmt.Printf("Failed to update password: %v\n", err)
 		os.Exit(1)
 	}
 	slog.Info("user password updated successfully", "username", username, "source", "CLI")
-	fmt.Printf("Password for user '%s' updated successfully\n", username)
+	fmt.Printf("Password for user '%s' updated successfully.\n", username)
 }
 
 func openCLIStorage(cfg *config.Config) *database.Storage {
-	fmt.Printf("Using database: %s\n", cfg.DatabasePath)
-	if cfg.LogPath != "" {
-		fmt.Printf("Using log:      %s\n", cfg.LogPath)
-	} else {
-		fmt.Printf("Using log:      No log file specified (logging to stdout only)\n")
-	}
-
 	storage, err := database.InitDB(cfg.DatabasePath, true)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		fmt.Printf("Failed to connect to database: %v\n", err)
 		os.Exit(1)
 	}
 	return storage
