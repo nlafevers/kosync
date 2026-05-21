@@ -5,20 +5,47 @@ set -e
 # Config
 PORT=8081
 URL="http://localhost:$PORT"
-DB="kosync.db"
+DB="kosync_test.db"
 USER="testuser"
 PASS="testpass"
 DOC="doc123"
+BIN_NAME="kosync_bin"
+
+cleanup() {
+    echo "Cleaning up..."
+    if [ -n "$PID" ]; then
+        kill $PID 2>/dev/null || true
+    fi
+    rm -f "$DB" "$DB-shm" "$DB-wal" "$BIN_NAME"
+}
+
+trap cleanup EXIT
+
+# Build server
+echo "Building KOSYNC..."
+go build -o $BIN_NAME ../cmd/kosync
+
+# Create user via CLI
+echo "Creating test user..."
+CLI_OUTPUT=$(KOSYNC_DATABASE_PATH=$DB ./$BIN_NAME create-user "$USER" --password-stdin <<EOF
+$PASS
+EOF
+)
+if [[ $CLI_OUTPUT != *"User '$USER' created/updated successfully."* ]]; then
+    echo "CLI user creation FAILED: $CLI_OUTPUT"
+    exit 1
+fi
 
 # Start server in background
-go build -o kosync ../cmd/kosync
-./kosync &
-PID=$!
-trap "kill $PID; rm -f $DB" EXIT
-sleep 2
+echo "Starting KOSYNC server..."
+export KOSYNC_PORT=$PORT
+export KOSYNC_DATABASE_PATH=$DB
+export KOSYNC_LOG_LEVEL=debug
+export KOSYNC_DISABLE_REGISTRATION=true
 
-echo "Testing Registration..."
-curl -s -X POST $URL/users/create -H "Content-Type: application/json" -d "{\"username\":\"$USER\",\"password\":\"$PASS\"}" > /dev/null
+./$BIN_NAME &
+PID=$!
+sleep 2
 
 echo "Testing Auth..."
 curl -s -X GET $URL/users/auth -H "X-AUTH-USER:$USER" -H "X-AUTH-KEY:$PASS" -H "Accept: application/vnd.koreader.v1+json" > /dev/null
