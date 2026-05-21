@@ -198,6 +198,24 @@ func (s *Storage) DeleteUser(username string) error {
 // EnforceStorageCap checks if the database file exceeds the size limit.
 // If it does, it deletes the oldest 20% of progress records and runs VACUUM.
 func (s *Storage) EnforceStorageCap(path string, capMB int) (bool, error) {
+	return enforceStorageCap(path, capMB, func() error {
+		// Delete oldest 20% of progress records.
+		_, err := s.db.Exec(`
+		DELETE FROM progress
+		WHERE (username, document) IN (
+			SELECT username, document
+			FROM progress
+			ORDER BY timestamp ASC
+			LIMIT (SELECT COUNT(*) / 5 FROM progress) + 1
+		)`)
+		return err
+	}, func() error {
+		_, err := s.db.Exec("VACUUM")
+		return err
+	})
+}
+
+func enforceStorageCap(path string, capMB int, prune func() error, vacuum func() error) (bool, error) {
 	if capMB <= 0 {
 		return false, nil
 	}
@@ -211,19 +229,13 @@ func (s *Storage) EnforceStorageCap(path string, capMB int) (bool, error) {
 		return false, nil
 	}
 
-	// Delete oldest 20% of progress records.
-	_, err = s.db.Exec(`
-		DELETE FROM progress 
-		WHERE (username, document) IN (
-			SELECT username, document 
-			FROM progress 
-			ORDER BY timestamp ASC 
-			LIMIT (SELECT COUNT(*) / 5 FROM progress) + 1
-		)`)
-	if err != nil {
+	if err := prune(); err != nil {
 		return false, err
 	}
 
-	_, err = s.db.Exec("VACUUM")
-	return true, err
+	if err := vacuum(); err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
