@@ -14,6 +14,7 @@ RUN go mod download
 COPY . .
 
 # Build the application as a static binary
+# CGO_ENABLED=0 ensures it's statically linked
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o kosync ./cmd/kosync/main.go
 
 # Run stage
