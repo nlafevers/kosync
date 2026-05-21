@@ -35,6 +35,9 @@ func Load() (*Config, error) {
 	viper.SetEnvPrefix("KOSYNC")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
+	if err := viper.BindEnv("database_path", "KOSYNC_DATABASE_PATH", "KOSYNC_DB_PATH"); err != nil {
+		return nil, err
+	}
 
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
@@ -45,6 +48,11 @@ func Load() (*Config, error) {
 	var cfg Config
 	if err := viper.Unmarshal(&cfg); err != nil {
 		return nil, err
+	}
+	if cfg.DatabasePath == "" || !databasePathConfigured() {
+		if legacyDBPath := viper.GetString("db_path"); legacyDBPath != "" {
+			cfg.DatabasePath = legacyDBPath
+		}
 	}
 
 	// Absolute path resolution for DatabasePath and LogPath
@@ -66,4 +74,12 @@ func Load() (*Config, error) {
 	}
 
 	return &cfg, nil
+}
+
+func databasePathConfigured() bool {
+	if viper.InConfig("database_path") {
+		return true
+	}
+	_, ok := os.LookupEnv("KOSYNC_DATABASE_PATH")
+	return ok
 }

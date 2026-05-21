@@ -52,6 +52,7 @@ func TestLoadConfigDefaults(t *testing.T) {
 	// Ensure env is clean
 	os.Unsetenv("KOSYNC_PORT")
 	os.Unsetenv("KOSYNC_DATABASE_PATH")
+	os.Unsetenv("KOSYNC_DB_PATH")
 
 	cfg, err := Load()
 	if err != nil {
@@ -63,5 +64,19 @@ func TestLoadConfigDefaults(t *testing.T) {
 	}
 	if cfg.LogLevel != "info" {
 		t.Errorf("expected info default, got %s", cfg.LogLevel)
+	}
+}
+
+func TestLoadConfigLegacyDBPathEnv(t *testing.T) {
+	os.Setenv("KOSYNC_DB_PATH", "/tmp/legacy.db")
+	defer os.Unsetenv("KOSYNC_DB_PATH")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+
+	if cfg.DatabasePath != "/tmp/legacy.db" {
+		t.Errorf("expected /tmp/legacy.db, got %s", cfg.DatabasePath)
 	}
 }
