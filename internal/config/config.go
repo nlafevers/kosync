@@ -55,25 +55,36 @@ func Load() (*Config, error) {
 		}
 	}
 
-	// Absolute path resolution for DatabasePath and LogPath
-	exePath, err := os.Executable()
-	if err == nil {
-		exeDir := filepath.Dir(exePath)
-		if !filepath.IsAbs(cfg.DatabasePath) {
-			cfg.DatabasePath = filepath.Join(exeDir, cfg.DatabasePath)
-		}
-		if cfg.LogPath != "" && !filepath.IsAbs(cfg.LogPath) {
-			cfg.LogPath = filepath.Join(exeDir, cfg.LogPath)
-		} else if cfg.LogPath == "" {
-			// Auto-discover kosync.log in the application directory
-			defaultLog := filepath.Join(exeDir, "kosync.log")
-			if _, err := os.Stat(defaultLog); err == nil {
-				cfg.LogPath = defaultLog
-			}
-		}
-	}
+	resolveExecutablePaths("kosync", &cfg.DatabasePath, &cfg.LogPath)
 
 	return &cfg, nil
+}
+
+func resolveExecutablePaths(appName string, databasePath *string, logPath *string, extraPaths ...*string) {
+	exePath, err := os.Executable()
+	if err != nil {
+		return
+	}
+
+	exeDir := filepath.Dir(exePath)
+	resolvePath(exeDir, databasePath)
+	if logPath != nil && *logPath != "" {
+		resolvePath(exeDir, logPath)
+	} else if logPath != nil {
+		defaultLog := filepath.Join(exeDir, appName+".log")
+		if _, err := os.Stat(defaultLog); err == nil {
+			*logPath = defaultLog
+		}
+	}
+	for _, path := range extraPaths {
+		resolvePath(exeDir, path)
+	}
+}
+
+func resolvePath(exeDir string, path *string) {
+	if path != nil && *path != "" && !filepath.IsAbs(*path) {
+		*path = filepath.Join(exeDir, *path)
+	}
 }
 
 func databasePathConfigured() bool {
