@@ -35,6 +35,9 @@ func TestCLIUserManagement(t *testing.T) {
 			t.Fatalf("create-user failed: %v, output: %s", err, output)
 		}
 
+		if bytes.Contains(output, []byte("Using database:")) || bytes.Contains(output, []byte("Using log:")) {
+			t.Errorf("unexpected config path output: %s", output)
+		}
 		if !bytes.Contains(output, []byte("User 'clitest' created/updated successfully.")) {
 			t.Errorf("unexpected output: %s", output)
 		}
