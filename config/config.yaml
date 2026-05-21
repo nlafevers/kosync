@@ -1,6 +1,7 @@
 port: 8081
-db_path: ./data/kosync.db
+database_path: ./data/kosync.db
 log_level: info
+json_log: false
 log_path: ""
 disable_registration: false
 storage_cap_mb: 0
