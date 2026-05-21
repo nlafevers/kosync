@@ -9,9 +9,10 @@ import (
 )
 
 type Config struct {
-	Port                string `mapstructure:"port"`
-	DBPath              string `mapstructure:"db_path"`
+	Port                int    `mapstructure:"port"`
+	DatabasePath        string `mapstructure:"database_path"`
 	LogLevel            string `mapstructure:"log_level"`
+	JSONLog             bool   `mapstructure:"json_log"`
 	LogPath             string `mapstructure:"log_path"`
 	DisableRegistration bool   `mapstructure:"disable_registration"`
 	StorageCapMB        int    `mapstructure:"storage_cap_mb"`
@@ -23,9 +24,10 @@ func Load() (*Config, error) {
 	viper.AddConfigPath(".")
 	viper.AddConfigPath("./config")
 
-	viper.SetDefault("port", "8081")
-	viper.SetDefault("db_path", "data/kosync.db")
+	viper.SetDefault("port", 8081)
+	viper.SetDefault("database_path", "data/kosync.db")
 	viper.SetDefault("log_level", "info")
+	viper.SetDefault("json_log", false)
 	viper.SetDefault("log_path", "")
 	viper.SetDefault("disable_registration", false)
 	viper.SetDefault("storage_cap_mb", 0)
@@ -45,12 +47,12 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
-	// Absolute path resolution for DBPath and LogPath
+	// Absolute path resolution for DatabasePath and LogPath
 	exePath, err := os.Executable()
 	if err == nil {
 		exeDir := filepath.Dir(exePath)
-		if !filepath.IsAbs(cfg.DBPath) {
-			cfg.DBPath = filepath.Join(exeDir, cfg.DBPath)
+		if !filepath.IsAbs(cfg.DatabasePath) {
+			cfg.DatabasePath = filepath.Join(exeDir, cfg.DatabasePath)
 		}
 		if cfg.LogPath != "" && !filepath.IsAbs(cfg.LogPath) {
 			cfg.LogPath = filepath.Join(exeDir, cfg.LogPath)

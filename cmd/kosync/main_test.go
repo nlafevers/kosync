@@ -21,10 +21,10 @@ func TestCLIUserManagement(t *testing.T) {
 	defer os.Remove(exe)
 
 	dbPath := filepath.Join(t.TempDir(), "cli_test.db")
-	
+
 	// Set env for the binary
-	os.Setenv("KOSYNC_DB_PATH", dbPath)
-	defer os.Unsetenv("KOSYNC_DB_PATH")
+	os.Setenv("KOSYNC_DATABASE_PATH", dbPath)
+	defer os.Unsetenv("KOSYNC_DATABASE_PATH")
 
 	// 2. Test create-user (non-interactive)
 	t.Run("Create User", func(t *testing.T) {

@@ -146,10 +146,10 @@ func HandleUpdateProgress(storage *database.Storage, cfg *config.Config) http.Ha
 		}
 
 		// Enforce storage cap
-		if pruned, err := storage.EnforceStorageCap(cfg.DBPath, cfg.StorageCapMB); err != nil {
+		if pruned, err := storage.EnforceStorageCap(cfg.DatabasePath, cfg.StorageCapMB); err != nil {
 			slog.Error("failed to enforce storage cap", "error", err)
 		} else if pruned {
-			slog.Info("storage cap enforced: oldest records pruned", "db_path", cfg.DBPath, "cap_mb", cfg.StorageCapMB)
+			slog.Info("storage cap enforced: oldest records pruned", "database_path", cfg.DatabasePath, "cap_mb", cfg.StorageCapMB)
 		}
 
 		slog.Info("progress updated", "username", username, "document", p.Document)

@@ -27,7 +27,7 @@ func main() {
 		fmt.Printf("Error loading config: %v\n", err)
 		os.Exit(1)
 	}
-	logger.New(cfg.LogLevel, false, cfg.LogPath)
+	logger.New(cfg.LogLevel, cfg.JSONLog, cfg.LogPath)
 
 	// Handle CLI commands
 	if len(os.Args) > 1 {
@@ -37,11 +37,11 @@ func main() {
 
 	slog.Info("KOSYNC starting",
 		"port", cfg.Port,
-		"db_path", cfg.DBPath,
+		"database_path", cfg.DatabasePath,
 		"log_level", cfg.LogLevel,
 	)
 
-	storage, err := database.InitDB(cfg.DBPath, true)
+	storage, err := database.InitDB(cfg.DatabasePath, true)
 	if err != nil {
 		slog.Error("failed to initialize database", "error", err)
 		os.Exit(1)
@@ -72,7 +72,7 @@ func main() {
 	slog.Info("server listening", "port", cfg.Port)
 
 	// Graceful shutdown
-	server := &http.Server{Addr: ":" + cfg.Port, Handler: mux}
+	server := &http.Server{Addr: fmt.Sprintf(":%d", cfg.Port), Handler: mux}
 	go func() {
 		sigChan := make(chan os.Signal, 1)
 		signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
@@ -107,14 +107,14 @@ func runCLI(cfg *config.Config) {
 		}
 		username := os.Args[2]
 
-		fmt.Printf("Using database: %s\n", cfg.DBPath)
+		fmt.Printf("Using database: %s\n", cfg.DatabasePath)
 		if cfg.LogPath != "" {
 			fmt.Printf("Using log:      %s\n", cfg.LogPath)
 		} else {
 			fmt.Printf("Using log:      No log file specified (logging to stdout only)\n")
 		}
 
-		storage, err := database.InitDB(cfg.DBPath, false)
+		storage, err := database.InitDB(cfg.DatabasePath, false)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)

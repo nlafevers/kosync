@@ -140,7 +140,7 @@ func TestHandleGetProgress(t *testing.T) {
 func TestHandleUpdateProgress(t *testing.T) {
 	storage, dbPath := setupTestDB(t)
 	defer storage.Close()
-	cfg := &config.Config{DBPath: dbPath, StorageCapMB: 0}
+	cfg := &config.Config{DatabasePath: dbPath, StorageCapMB: 0}
 
 	t.Run("Success", func(t *testing.T) {
 		p := models.Progress{Document: "doc2", Percentage: 0.8}
