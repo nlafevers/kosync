@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func Init(level, logPath string) *slog.Logger {
+func New(level string, json bool, logPath string) *slog.Logger {
 	var slogLevel slog.Level
 	switch strings.ToLower(level) {
 	case "debug":

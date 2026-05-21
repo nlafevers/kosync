@@ -27,7 +27,7 @@ func main() {
 		fmt.Printf("Error loading config: %v\n", err)
 		os.Exit(1)
 	}
-	logger.Init(cfg.LogLevel, cfg.LogPath)
+	logger.New(cfg.LogLevel, false, cfg.LogPath)
 
 	// Handle CLI commands
 	if len(os.Args) > 1 {
