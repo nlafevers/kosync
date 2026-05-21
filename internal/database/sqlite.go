@@ -62,16 +62,15 @@ func InitDB(path string, allowCreate bool) (*Storage, error) {
 		return nil, err
 	}
 
-	s := &Storage{db: db}
-	if err := s.createTables(); err != nil {
+	if err := Migrate(db); err != nil {
 		db.Close()
 		return nil, err
 	}
 
-	return s, nil
+	return &Storage{db: db}, nil
 }
 
-func (s *Storage) createTables() error {
+func Migrate(db *sql.DB) error {
 	usersTable := `
 	CREATE TABLE IF NOT EXISTS users (
 		username TEXT PRIMARY KEY,
@@ -91,11 +90,11 @@ func (s *Storage) createTables() error {
 		FOREIGN KEY (username) REFERENCES users(username)
 	);`
 
-	if _, err := s.db.Exec(usersTable); err != nil {
+	if _, err := db.Exec(usersTable); err != nil {
 		return fmt.Errorf("failed to create users table: %w", err)
 	}
 
-	if _, err := s.db.Exec(progressTable); err != nil {
+	if _, err := db.Exec(progressTable); err != nil {
 		return fmt.Errorf("failed to create progress table: %w", err)
 	}
 
