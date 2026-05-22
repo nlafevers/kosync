@@ -11,7 +11,8 @@
 .idea/
 
 # AI files
-AGENT.md
+#AGENTS.md
+#GEMINI.md
 CLAUDE.md
 LLAMA.md
 MISTRAL.md
