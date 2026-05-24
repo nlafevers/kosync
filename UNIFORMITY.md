@@ -16,6 +16,7 @@ This project is being refactored alongside its sibling project so equivalent beh
 - `vacuum`
 - `resolveExecutablePaths`
 - `resolvePath`
+- HTTP Routing (native `net/http.ServeMux`)
 
 ## High-Confidence Standardization Targets
 
