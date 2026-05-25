@@ -208,7 +208,7 @@ KOSYNC includes a built-in CLI for managing users securely without exposing pass
 ```bash
 ./kosync create-user <username>
 ```
-You will be prompted to enter and confirm a password. The characters will not be visible. If the user already exists, the password is updated.
+You will be prompted to enter and confirm a password. The characters will not be visible. The command will fail if the user already exists. To change an existing user's password, use the `change-password` command.
 
 ### Change a Password
 ```bash
