@@ -28,73 +28,72 @@ func TestCLIUserManagement(t *testing.T) {
 
 	// 2. Test create-user (non-interactive)
 	t.Run("Create User", func(t *testing.T) {
-		cmd := exec.Command(exe, "create-user", "clitest", "--password-stdin")
-		cmd.Stdin = bytes.NewBufferString("clipass\n")
-		output, err := cmd.CombinedOutput()
-		if err != nil {
-			t.Fatalf("create-user failed: %v, output: %s", err, output)
-		}
+	        cmd := exec.Command(exe, "create-user", "clitest", "--password-stdin")
+	        cmd.Stdin = bytes.NewBufferString("clipass\n")
+	        output, err := cmd.CombinedOutput()
+	        if err != nil {
+	                t.Fatalf("create-user failed: %v, output: %s", err, output)
+	        }
 
-		if bytes.Contains(output, []byte("Using database:")) || bytes.Contains(output, []byte("Using log:")) {
-			t.Errorf("unexpected config path output: %s", output)
-		}
-		if !bytes.Contains(output, []byte("User 'clitest' created/updated successfully.")) {
-			t.Errorf("unexpected output: %s", output)
-		}
+	        if bytes.Contains(output, []byte("Using database:")) || bytes.Contains(output, []byte("Using log:")) {
+	                t.Errorf("unexpected config path output: %s", output)
+	        }
+	        if !bytes.Contains(output, []byte("User 'clitest' created successfully.")) {
+	                t.Errorf("unexpected output: %s", output)
+	        }
 
-		// Verify in DB
-		s, _ := database.InitDB(dbPath, false)
-		defer s.Close()
-		hash, err := s.GetUserHash("clitest")
-		if err != nil {
-			t.Errorf("user not found in db: %v", err)
-		}
-		if !api.CheckPassword(hash, "clipass") {
-			t.Error("password mismatch")
-		}
+	        // Verify in DB
+	        s, _ := database.InitDB(dbPath, false)
+	        defer s.Close()
+	        hash, err := s.GetUserHash("clitest")
+	        if err != nil {
+	                t.Errorf("user not found in db: %v", err)
+	        }
+	        if !api.CheckPassword(hash, "clipass") {
+	                t.Error("password mismatch")
+	        }
 	})
 
 	t.Run("Change Password", func(t *testing.T) {
-		cmd := exec.Command(exe, "change-password", "clitest", "--password-stdin")
-		cmd.Stdin = bytes.NewBufferString("newclipass\n")
-		output, err := cmd.CombinedOutput()
-		if err != nil {
-			t.Fatalf("change-password failed: %v, output: %s", err, output)
-		}
+	        cmd := exec.Command(exe, "change-password", "clitest", "--password-stdin")
+	        cmd.Stdin = bytes.NewBufferString("newclipass\n")
+	        output, err := cmd.CombinedOutput()
+	        if err != nil {
+	                t.Fatalf("change-password failed: %v, output: %s", err, output)
+	        }
 
-		if !bytes.Contains(output, []byte("Password for user 'clitest' updated successfully.")) {
-			t.Errorf("unexpected output: %s", output)
-		}
+	        if !bytes.Contains(output, []byte("Password for user 'clitest' updated successfully.")) {
+	                t.Errorf("unexpected output: %s", output)
+	        }
 
-		// Verify in DB
-		s, _ := database.InitDB(dbPath, false)
-		defer s.Close()
-		hash, _ := s.GetUserHash("clitest")
-		if !api.CheckPassword(hash, "newclipass") {
-			t.Error("password update failed")
-		}
+	        // Verify in DB
+	        s, _ := database.InitDB(dbPath, false)
+	        defer s.Close()
+	        hash, _ := s.GetUserHash("clitest")
+	        if !api.CheckPassword(hash, "newclipass") {
+	                t.Error("password update failed")
+	        }
 	})
 
-	t.Run("Create Existing User Updates Password", func(t *testing.T) {
-		cmd := exec.Command(exe, "create-user", "clitest", "--password-stdin")
-		cmd.Stdin = bytes.NewBufferString("upsertpass\n")
-		output, err := cmd.CombinedOutput()
-		if err != nil {
-			t.Fatalf("create existing user failed: %v, output: %s", err, output)
-		}
+	t.Run("Create Existing User Fails", func(t *testing.T) {
+	        cmd := exec.Command(exe, "create-user", "clitest", "--password-stdin")
+	        cmd.Stdin = bytes.NewBufferString("failpass\n")
+	        output, err := cmd.CombinedOutput()
+	        if err == nil {
+	                t.Fatal("expected create existing user to fail, but it succeeded")
+	        }
 
-		if !bytes.Contains(output, []byte("User 'clitest' created/updated successfully.")) {
-			t.Errorf("unexpected output: %s", output)
-		}
+	        if !bytes.Contains(output, []byte("Error: User 'clitest' already exists")) {
+	                t.Errorf("unexpected output: %s", output)
+	        }
 
-		s, _ := database.InitDB(dbPath, false)
-		defer s.Close()
-		hash, _ := s.GetUserHash("clitest")
-		if !api.CheckPassword(hash, "upsertpass") {
-			t.Error("create existing user did not update password")
-		}
+	        s, _ := database.InitDB(dbPath, false)
+	        defer s.Close()
+	        hash, _ := s.GetUserHash("clitest")
+	        if api.CheckPassword(hash, "failpass") {
+	                t.Error("password was updated for existing user")
+	        }
 	})
-
 	t.Run("Delete User", func(t *testing.T) {
 		cmd := exec.Command(exe, "delete-user", "clitest")
 		output, err := cmd.CombinedOutput()
