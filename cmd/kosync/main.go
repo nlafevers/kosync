@@ -157,24 +157,28 @@ func printUsage() {
 }
 
 func createUser(cfg *config.Config, username, password string) {
-	storage := openCLIStorage(cfg)
-	defer storage.Close()
+        storage := openCLIStorage(cfg)
+        defer storage.Close()
 
-	hash, err := api.HashPassword(password)
-	if err != nil {
-		slog.Error("failed to hash password", "username", username, "source", "CLI", "error", err)
-		fmt.Printf("Failed to hash password: %v\n", err)
-		os.Exit(1)
-	}
-	if err := storage.SaveUser(username, hash); err != nil {
-		slog.Error("failed to create user", "username", username, "source", "CLI", "error", err)
-		fmt.Printf("Failed to save user: %v\n", err)
-		os.Exit(1)
-	}
-	slog.Info("user created successfully", "username", username, "source", "CLI")
-	fmt.Printf("User '%s' created/updated successfully.\n", username)
+        hash, err := api.HashPassword(password)
+        if err != nil {
+                slog.Error("failed to hash password", "username", username, "source", "CLI", "error", err)
+                fmt.Printf("Failed to hash password: %v\n", err)
+                os.Exit(1)
+        }
+        if err := storage.CreateUserIfNotExists(username, hash); err != nil {
+                if err.Error() == "user already exists" {
+                        slog.Warn("user already exists", "username", username, "source", "CLI")
+                        fmt.Printf("Error: User '%s' already exists\n", username)
+                        os.Exit(1)
+                }
+                slog.Error("failed to create user", "username", username, "source", "CLI", "error", err)
+                fmt.Printf("Failed to save user: %v\n", err)
+                os.Exit(1)
+        }
+        slog.Info("user created successfully", "username", username, "source", "CLI")
+        fmt.Printf("User '%s' created successfully.\n", username)
 }
-
 func deleteUser(cfg *config.Config, username string) {
 	storage := openCLIStorage(cfg)
 	defer storage.Close()
