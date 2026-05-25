@@ -159,7 +159,8 @@ func (s *Storage) CreateUserIfNotExists(username, password string) error {
         return err
 }
 
-// SaveUser creates or updates a user with a password hash.func (s *Storage) SaveUser(username, password string) error {
+// SaveUser creates or updates a user with a password hash.
+func (s *Storage) SaveUser(username, password string) error {
 	_, err := s.db.Exec(`
 		INSERT INTO users (username, password_hash) VALUES (?, ?)
 		ON CONFLICT(username) DO UPDATE SET password_hash=excluded.password_hash`,
