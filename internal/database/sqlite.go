@@ -141,11 +141,25 @@ func (s *Storage) UpsertProgress(username string, p models.Progress) error {
 
 // CreateUser creates a new user with a password (which should be the MD5 hash from the client).
 func (s *Storage) CreateUser(username, password string) error {
-	return s.SaveUser(username, password)
+        return s.SaveUser(username, password)
 }
 
-// SaveUser creates or updates a user with a password hash.
-func (s *Storage) SaveUser(username, password string) error {
+// CreateUserIfNotExists creates a new user only if they don't already exist.
+func (s *Storage) CreateUserIfNotExists(username, password string) error {
+        var exists bool
+        err := s.db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE username = ?)", username).Scan(&exists)
+        if err != nil {
+                return err
+        }
+        if exists {
+                return fmt.Errorf("user already exists")
+        }
+
+        _, err = s.db.Exec(`INSERT INTO users (username, password_hash) VALUES (?, ?)`, username, password)
+        return err
+}
+
+// SaveUser creates or updates a user with a password hash.func (s *Storage) SaveUser(username, password string) error {
 	_, err := s.db.Exec(`
 		INSERT INTO users (username, password_hash) VALUES (?, ?)
 		ON CONFLICT(username) DO UPDATE SET password_hash=excluded.password_hash`,
