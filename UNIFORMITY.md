@@ -40,3 +40,4 @@ This project is being refactored alongside its sibling project so equivalent beh
 - `config.Load` intentionally differs because each project has different domain settings; shared path-resolution helpers remain identical.
 - KOPDS has a repository-level `EnforceStorageCap` adapter to satisfy the book repository interface; KOSYNC calls storage directly.
 - Similarity matches involving unrelated `Close` methods are false positives and are not uniformity targets.
+- Both KOPDS and KOSYNC `create-user` CLI commands fail if the user already exists to prevent accidental overwrites. Use `change-password` to update.
