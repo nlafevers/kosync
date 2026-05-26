@@ -75,7 +75,7 @@ func main() {
 	slog.Info("server listening", "port", cfg.Port)
 
 	// Graceful shutdown
-	server := &http.Server{Addr: fmt.Sprintf(":%d", cfg.Port), Handler: mux}
+	server := &http.Server{Addr: fmt.Sprintf(":%d", cfg.Port), Handler: api.LoggingMiddleware(mux)}
 	go func() {
 		sigChan := make(chan os.Signal, 1)
 		signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
