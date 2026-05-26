@@ -16,11 +16,9 @@ import (
 	"kosync/internal/config"
 	"kosync/internal/database"
 	"kosync/internal/logger"
-	"kosync/internal/middleware"
 
 	"golang.org/x/term"
-)
-
+	)
 const appName = "kosync"
 
 func main() {
@@ -69,12 +67,11 @@ func main() {
 
 	// Middleware chaining
 	var handler http.Handler = protected
-	handler = middleware.AuthMiddleware(storage, handler)
-	handler = middleware.AcceptMiddleware(handler)
-	handler = middleware.ContentTypeMiddleware(handler)
+	handler = api.AuthMiddleware(storage, handler)
+	handler = api.AcceptMiddleware(handler)
+	handler = api.ContentTypeMiddleware(handler)
 
 	mux.Handle("/", handler)
-
 	slog.Info("server listening", "port", cfg.Port)
 
 	// Graceful shutdown

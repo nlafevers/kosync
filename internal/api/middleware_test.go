@@ -1,31 +1,17 @@
-package middleware
+package api
 
 import (
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"testing"
-
-	"kosync/internal/api"
-	"kosync/internal/database"
 )
-
-func setupTestDB(t *testing.T) (*database.Storage, string) {
-	tmpDir := t.TempDir()
-	dbPath := filepath.Join(tmpDir, "test.db")
-	storage, err := database.InitDB(dbPath, true)
-	if err != nil {
-		t.Fatalf("failed to init db: %v", err)
-	}
-	return storage, dbPath
-}
 
 func TestAuthMiddleware(t *testing.T) {
 	storage, _ := setupTestDB(t)
 	defer storage.Close()
 
 	// Seed user
-	hash, _ := api.HashPassword("testpass")
+	hash, _ := HashPassword("testpass")
 	storage.CreateUser("testuser", hash)
 
 	nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

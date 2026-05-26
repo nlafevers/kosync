@@ -1,11 +1,10 @@
-package middleware
+package api
 
 import (
 	"log/slog"
 	"net/http"
 	"sync"
 
-	"kosync/internal/api"
 	"kosync/internal/database"
 
 	"golang.org/x/time/rate"
@@ -32,7 +31,7 @@ func AuthMiddleware(storage *database.Storage, next http.Handler) http.Handler {
 			return
 		}
 
-		if !api.CheckPassword(hash, key) {
+		if !CheckPassword(hash, key) {
 			slog.Warn("auth failure: invalid key", "username", username, "remote_addr", r.RemoteAddr)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
