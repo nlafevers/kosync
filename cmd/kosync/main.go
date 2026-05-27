@@ -35,10 +35,13 @@ func main() {
 		return
 	}
 
-	slog.Info("KOSYNC starting",
+	slog.Info("Starting KOSYNC",
+		"app_name", appName,
 		"port", cfg.Port,
 		"database_path", cfg.DatabasePath,
 		"log_level", cfg.LogLevel,
+		"json_log", cfg.JSONLog,
+		"log_path", cfg.LogPath,
 	)
 
 	storage, err := database.InitDB(cfg.DatabasePath, true)
@@ -79,11 +82,15 @@ func main() {
 	go func() {
 		sigChan := make(chan os.Signal, 1)
 		signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-		<-sigChan
 
-		slog.Info("shutdown signal received")
+		sig := <-sigChan
+		slog.Info("Shutdown signal received", "signal", sig.String())
+		slog.Info("Shutting down server...")
+
 		if err := server.Shutdown(context.Background()); err != nil {
-			slog.Error("server shutdown error", "error", err)
+			slog.Error("Server shutdown failed", "error", err)
+		} else {
+			slog.Info("Server exited cleanly")
 		}
 	}()
 
