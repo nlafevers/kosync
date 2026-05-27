@@ -98,28 +98,30 @@ func generateRequestID() string {
 // AuthMiddleware validates X-AUTH-USER and X-AUTH-KEY against the database and stores the user in context.
 func AuthMiddleware(storage *database.Storage, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log := GetLogger(r.Context())
 		username := r.Header.Get("X-AUTH-USER")
 		key := r.Header.Get("X-AUTH-KEY")
 
 		if username == "" || key == "" {
-			slog.Warn("missing auth headers", "remote_addr", r.RemoteAddr)
+			log.Warn("missing auth headers", "remote_addr", r.RemoteAddr, "source", "API")
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
 		hash, err := storage.GetUserHash(username)
 		if err != nil {
-			slog.Warn("auth failure: user not found", "username", username, "error", err, "remote_addr", r.RemoteAddr)
+			log.Warn("auth failure: user not found", "username", username, "error", err, "remote_addr", r.RemoteAddr, "source", "API")
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
 		if !CheckPassword(hash, key) {
-			slog.Warn("auth failure: invalid key", "username", username, "remote_addr", r.RemoteAddr)
+			log.Warn("auth failure: invalid key", "username", username, "remote_addr", r.RemoteAddr, "source", "API")
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
+		log.Debug("auth success", "username", username, "source", "API")
 		// Store user in context
 		ctx := context.WithValue(r.Context(), ContextKeyUser, username)
 		next.ServeHTTP(w, r.WithContext(ctx))
@@ -130,7 +132,7 @@ func AuthMiddleware(storage *database.Storage, next http.Handler) http.Handler {
 func AcceptMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Accept") != KOReaderMimeType {
-			slog.Warn("invalid accept header", "accept", r.Header.Get("Accept"), "remote_addr", r.RemoteAddr)
+			GetLogger(r.Context()).Warn("invalid accept header", "accept", r.Header.Get("Accept"), "remote_addr", r.RemoteAddr, "source", "API")
 			http.Error(w, "Not Acceptable", http.StatusNotAcceptable)
 			return
 		}
@@ -182,7 +184,7 @@ func RateLimitMiddleware(limiter *IPRateLimiter, next http.Handler) http.Handler
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ip := r.RemoteAddr // In production with a proxy, this might need X-Forwarded-For handling
 		if !limiter.GetLimiter(ip).Allow() {
-			slog.Warn("rate limit exceeded", "ip", ip)
+			GetLogger(r.Context()).Warn("rate limit exceeded", "ip", ip, "source", "API")
 			http.Error(w, "Too Many Requests", http.StatusTooManyRequests)
 			return
 		}

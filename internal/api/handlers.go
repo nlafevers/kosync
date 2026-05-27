@@ -3,7 +3,6 @@ package api
 import (
 	"crypto/rand"
 	"encoding/json"
-	"log/slog"
 	"math/big"
 	"net/http"
 	"time"
@@ -25,15 +24,16 @@ type UserCreateResponse struct {
 
 func HandleUserCreate(storage *database.Storage, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		log := GetLogger(r.Context())
 		if cfg.DisableRegistration {
-			slog.Warn("registration attempt while disabled", "remote_addr", r.RemoteAddr, "source", "API")
+			log.Warn("registration attempt while disabled", "remote_addr", r.RemoteAddr, "source", "API")
 			http.Error(w, "Registration is disabled", http.StatusForbidden)
 			return
 		}
 
 		var req UserCreateRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			slog.Error("failed to decode registration request", "error", err, "source", "API")
+			log.Error("failed to decode registration request", "error", err, "source", "API")
 			http.Error(w, "Invalid request body", http.StatusBadRequest)
 			return
 		}
@@ -46,7 +46,7 @@ func HandleUserCreate(storage *database.Storage, cfg *config.Config) http.Handle
 		// Check if user already exists
 		existingHash, err := storage.GetUserHash(req.Username)
 		if err == nil && existingHash != "" {
-			slog.Info("registration attempt for existing user", "username", req.Username, "source", "API")
+			log.Info("registration attempt for existing user", "username", req.Username, "source", "API")
 			// Random delay to prevent timing attacks, then pretend it succeeded
 			randomDelay()
 			w.WriteHeader(http.StatusCreated)
@@ -60,18 +60,18 @@ func HandleUserCreate(storage *database.Storage, cfg *config.Config) http.Handle
 		// Hash the password (which is already an MD5 from the client) using Bcrypt
 		hash, err := HashPassword(req.Password)
 		if err != nil {
-			slog.Error("failed to hash password", "username", req.Username, "error", err, "source", "API")
+			log.Error("failed to hash password", "username", req.Username, "error", err, "source", "API")
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 
 		if err := storage.CreateUser(req.Username, hash); err != nil {
-			slog.Error("failed to create user", "username", req.Username, "error", err, "source", "API")
+			log.Error("failed to create user", "username", req.Username, "error", err, "source", "API")
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 
-		slog.Info("user created successfully", "username", req.Username, "source", "API")
+		log.Info("user created successfully", "username", req.Username, "source", "API")
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(UserCreateResponse{
 			Username: req.Username,
@@ -81,56 +81,77 @@ func HandleUserCreate(storage *database.Storage, cfg *config.Config) http.Handle
 }
 
 func HandleAuth(w http.ResponseWriter, r *http.Request) {
+	log := GetLogger(r.Context())
+	username := GetUser(r.Context())
+	if username == "" {
+		username = r.Header.Get("X-AUTH-USER")
+	}
+
+	log.Info("auth successful", "username", username, "source", "API")
+	log.Debug("auth response generated", "username", username, "source", "API")
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"authorized": "OK"})
 }
 
 func HandleGetProgress(storage *database.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		username := r.Header.Get("X-AUTH-USER")
+		log := GetLogger(r.Context())
+		username := GetUser(r.Context())
+		if username == "" {
+			username = r.Header.Get("X-AUTH-USER")
+		}
 		document := r.PathValue("document")
 
 		if document == "" {
+			log.Warn("missing document id", "username", username, "path", r.URL.Path, "source", "API")
 			http.Error(w, "Document ID is required", http.StatusBadRequest)
 			return
 		}
 
 		progress, err := storage.GetProgress(username, document)
 		if err != nil {
-			slog.Error("failed to get progress", "username", username, "document", document, "error", err)
+			log.Error("failed to get progress", "username", username, "document", document, "error", err, "source", "API")
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 
 		if progress == nil {
-			slog.Warn("progress not found", "username", username, "document", document)
+			log.Warn("progress not found", "username", username, "document", document, "source", "API")
 			http.Error(w, "Not Found", http.StatusNotFound)
 			return
 		}
 
+		log.Info("progress retrieved", "username", username, "document", document, "percentage", progress.Percentage, "source", "API")
+		log.Debug("progress lookup details", "username", username, "document", document, "percentage", progress.Percentage, "source", "API")
 		json.NewEncoder(w).Encode(progress)
 	}
 }
 
 func HandleUpdateProgress(storage *database.Storage, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		username := r.Header.Get("X-AUTH-USER")
+		log := GetLogger(r.Context())
+		username := GetUser(r.Context())
+		if username == "" {
+			username = r.Header.Get("X-AUTH-USER")
+		}
 
 		var p models.Progress
 		if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
-			slog.Error("failed to decode progress update", "username", username, "error", err)
+			log.Error("failed to decode progress update", "username", username, "error", err, "source", "API")
 			http.Error(w, "Invalid request body", http.StatusBadRequest)
 			return
 		}
 
 		if p.Document == "" {
+			log.Warn("missing document id", "username", username, "source", "API")
 			http.Error(w, "Document ID is required", http.StatusBadRequest)
 			return
 		}
 
 		// Validate percentage
 		if p.Percentage < 0 || p.Percentage > 1 {
-			slog.Warn("invalid progress percentage", "username", username, "percentage", p.Percentage)
+			log.Warn("invalid progress percentage", "username", username, "percentage", p.Percentage, "source", "API")
 			http.Error(w, "Percentage must be between 0 and 1 inclusive", http.StatusBadRequest)
 			return
 		}
@@ -140,24 +161,24 @@ func HandleUpdateProgress(storage *database.Storage, cfg *config.Config) http.Ha
 		p.Timestamp = time.Now().Unix()
 
 		if err := storage.UpsertProgress(username, p); err != nil {
-			slog.Error("failed to upsert progress", "username", username, "document", p.Document, "error", err)
+			log.Error("failed to upsert progress", "username", username, "document", p.Document, "error", err, "source", "API")
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 
 		// Enforce storage cap
 		if pruned, err := storage.EnforceStorageCap(cfg.DatabasePath, cfg.StorageCapMB); err != nil {
-			slog.Error("failed to enforce storage cap", "error", err)
+			log.Error("failed to enforce storage cap", "error", err, "source", "API")
 		} else if pruned {
-			slog.Info("storage cap enforced: oldest records pruned", "database_path", cfg.DatabasePath, "cap_mb", cfg.StorageCapMB)
+			log.Warn("storage cap enforced: oldest records pruned", "database_path", cfg.DatabasePath, "cap_mb", cfg.StorageCapMB, "source", "API")
 		}
 
-		slog.Info("progress updated", "username", username, "document", p.Document)
+		log.Info("progress updated", "username", username, "document", p.Document, "percentage", p.Percentage, "timestamp", p.Timestamp, "source", "API")
+		log.Debug("progress update details", "username", username, "document", p.Document, "percentage", p.Percentage, "timestamp", p.Timestamp, "source", "API")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]string{"message": "Progress updated"})
 	}
 }
-
 func randomDelay() {
 	n, err := rand.Int(rand.Reader, big.NewInt(500))
 	if err != nil {
