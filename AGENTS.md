@@ -16,6 +16,7 @@ KOSYNC is maintained alongside KOPDS with a maximum-uniformity goal. Functions t
 - **Architecture:**
   - **Clean Architecture:** Separation of domain logic, databases, UI, frameworks. (Note: For simplicity and novice-friendliness, consider keeping database logic in a single file within the storage layer).
   - **Deployment:** Ships as a standalone, single-executable binary for bare-metal execution, or in a Docker container.
+- **Logging:** Use Go's standard `log/slog` package for structured logs, preserving request-scoped fields, shutdown events, and storage maintenance diagnostics across both KOSYNC and KOPDS.
 
 ## Reverse Engineering
 Since the goal of this project is to replace an existing server application and talk to an existing client application, what we know about the content of their communications is listed below.
