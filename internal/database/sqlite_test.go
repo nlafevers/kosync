@@ -1,7 +1,10 @@
 package database
 
 import (
+	"bytes"
+	"log/slog"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -82,7 +85,54 @@ func TestStorage(t *testing.T) {
 		}
 	})
 }
+func TestStorageLogsDatabaseOperations(t *testing.T) {
+	var buf bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	previous := slog.Default()
+	slog.SetDefault(logger)
+	t.Cleanup(func() {
+		slog.SetDefault(previous)
+	})
 
+	tmpDir := t.TempDir()
+	dbPath := filepath.Join(tmpDir, "logging.db")
+	storage, err := InitDB(dbPath, true)
+	if err != nil {
+		t.Fatalf("failed to init db: %v", err)
+	}
+	defer storage.Close()
+
+	if err := storage.CreateUser("alice", "hash123"); err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
+
+	if err := storage.CreateUserIfNotExists("alice", "hash123"); err == nil {
+		t.Fatal("expected duplicate user error")
+	}
+
+	if _, err := storage.GetProgress("alice", "missing-doc"); err != nil {
+		t.Fatalf("expected missing progress to return nil error, got %v", err)
+	}
+
+	storage.Close()
+	if _, err := storage.GetProgress("alice", "missing-doc"); err == nil {
+		t.Fatal("expected closed database lookup to error")
+	}
+
+	output := buf.String()
+	if !strings.Contains(output, "getting progress") {
+		t.Fatalf("expected getting progress log, got %s", output)
+	}
+	if !strings.Contains(output, "progress not found") {
+		t.Fatalf("expected progress not found log, got %s", output)
+	}
+	if !strings.Contains(output, "user already exists") {
+		t.Fatalf("expected duplicate user warning, got %s", output)
+	}
+	if !strings.Contains(output, "failed to get progress") {
+		t.Fatalf("expected failed to get progress log, got %s", output)
+	}
+}
 func TestStorageCap(t *testing.T) {
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "cap_test.db")
