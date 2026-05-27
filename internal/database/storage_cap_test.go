@@ -11,9 +11,9 @@ func TestEnforceStorageCapHelper(t *testing.T) {
 	missingPath := filepath.Join(t.TempDir(), "missing.db")
 
 	t.Run("disabled cap skips file stat and callbacks", func(t *testing.T) {
-		pruned, err := enforceStorageCap(missingPath, 0, func() error {
+		pruned, err := enforceStorageCap(missingPath, 0, func() (int64, error) {
 			t.Fatal("prune should not run when cap is disabled")
-			return nil
+			return 0, nil
 		}, func() error {
 			t.Fatal("vacuum should not run when cap is disabled")
 			return nil
@@ -27,9 +27,9 @@ func TestEnforceStorageCapHelper(t *testing.T) {
 	})
 
 	t.Run("missing file returns error", func(t *testing.T) {
-		pruned, err := enforceStorageCap(missingPath, 1, func() error {
+		pruned, err := enforceStorageCap(missingPath, 1, func() (int64, error) {
 			t.Fatal("prune should not run when stat fails")
-			return nil
+			return 0, nil
 		}, func() error {
 			t.Fatal("vacuum should not run when stat fails")
 			return nil
@@ -48,9 +48,9 @@ func TestEnforceStorageCapHelper(t *testing.T) {
 			t.Fatalf("failed to write test file: %v", err)
 		}
 
-		pruned, err := enforceStorageCap(path, 1, func() error {
+		pruned, err := enforceStorageCap(path, 1, func() (int64, error) {
 			t.Fatal("prune should not run below cap")
-			return nil
+			return 0, nil
 		}, func() error {
 			t.Fatal("vacuum should not run below cap")
 			return nil
@@ -70,9 +70,9 @@ func TestEnforceStorageCapHelper(t *testing.T) {
 		}
 
 		var calls []string
-		pruned, err := enforceStorageCap(path, 1, func() error {
+		pruned, err := enforceStorageCap(path, 1, func() (int64, error) {
 			calls = append(calls, "prune")
-			return nil
+			return 1, nil
 		}, func() error {
 			calls = append(calls, "vacuum")
 			return nil
@@ -95,8 +95,8 @@ func TestEnforceStorageCapHelper(t *testing.T) {
 		}
 
 		expectedErr := errors.New("prune failed")
-		pruned, err := enforceStorageCap(path, 1, func() error {
-			return expectedErr
+		pruned, err := enforceStorageCap(path, 1, func() (int64, error) {
+			return 0, expectedErr
 		}, func() error {
 			t.Fatal("vacuum should not run after prune error")
 			return nil

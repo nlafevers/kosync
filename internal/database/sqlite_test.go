@@ -3,6 +3,7 @@ package database
 import (
 	"bytes"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -148,10 +149,58 @@ func TestStorageCap(t *testing.T) {
 	}
 
 	// Force cap enforcement with small limit
-	// info, _ := os.Stat(dbPath)
-	// We'll just call it manually with a very low MB
 	_, err := storage.EnforceStorageCap(dbPath, 1) // 1MB might still be larger than this tiny DB
 	if err != nil {
 		t.Errorf("EnforceStorageCap failed: %v", err)
+	}
+}
+
+func TestStorageCapLogsMaintenance(t *testing.T) {
+	var buf bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	previous := slog.Default()
+	slog.SetDefault(logger)
+	t.Cleanup(func() {
+		slog.SetDefault(previous)
+	})
+
+	tmpDir := t.TempDir()
+	dbPath := filepath.Join(tmpDir, "cap_logging.db")
+	storage, err := InitDB(dbPath, true)
+	if err != nil {
+		t.Fatalf("failed to init db: %v", err)
+	}
+	defer storage.Close()
+
+	if err := storage.CreateUser("user1", "hash"); err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
+	if err := storage.UpsertProgress("user1", models.Progress{Document: "doc1", Timestamp: time.Now().Unix()}); err != nil {
+		t.Fatalf("failed to upsert progress: %v", err)
+	}
+
+	if err := os.Truncate(dbPath, 2*1024*1024); err != nil {
+		t.Fatalf("failed to enlarge database file: %v", err)
+	}
+
+	if _, err := storage.EnforceStorageCap(dbPath, 1); err != nil {
+		t.Fatalf("EnforceStorageCap failed: %v", err)
+	}
+
+	output := buf.String()
+	if !strings.Contains(output, "checking storage cap") {
+		t.Fatalf("expected storage cap check log, got %s", output)
+	}
+	if !strings.Contains(output, "storage cap exceeded") {
+		t.Fatalf("expected storage cap exceeded log, got %s", output)
+	}
+	if !strings.Contains(output, "pruning storage cap records") {
+		t.Fatalf("expected pruning log, got %s", output)
+	}
+	if !strings.Contains(output, "storage cap records pruned") {
+		t.Fatalf("expected pruned summary log, got %s", output)
+	}
+	if !strings.Contains(output, "database vacuum completed") {
+		t.Fatalf("expected vacuum completion log, got %s", output)
 	}
 }
