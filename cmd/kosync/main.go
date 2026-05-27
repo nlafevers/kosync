@@ -51,7 +51,11 @@ func main() {
 	}
 	defer storage.Close()
 
-	slog.Info("database initialized successfully")
+	slog.Info("Database initialized",
+		"database_path", cfg.DatabasePath,
+		"migration_status", "success",
+		"storage_cap_mb", cfg.StorageCapMB,
+	)
 
 	mux := http.NewServeMux()
 
