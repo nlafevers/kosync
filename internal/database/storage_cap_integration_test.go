@@ -53,5 +53,5 @@ func TestEnforceStorageCapIntegration(t *testing.T) {
 	if count >= 20000 {
 		t.Errorf("expected fewer than 20000 records, got %d", count)
 	}
-    t.Logf("Final record count: %d", count)
+	t.Logf("Final record count: %d", count)
 }

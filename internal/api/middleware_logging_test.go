@@ -12,7 +12,7 @@ import (
 func TestLoggingMiddleware(t *testing.T) {
 	var buf bytes.Buffer
 	logger := slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	
+
 	oldDefault := slog.Default()
 	slog.SetDefault(logger)
 	defer slog.SetDefault(oldDefault)
