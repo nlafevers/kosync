@@ -261,28 +261,33 @@ sqlite3 kosync.db ".backup 'kosync_backup.db'"
 
 ## 📊 Logging
 
-KOSYNC uses structured `slog` logging to provide an audit trail of system events and user management actions.
+KOSYNC uses structured `slog` logging to provide an audit trail of system events, user management actions, and reading progress synchronization. All API logs include a `request_id` to correlate multiple events (like auth success followed by a progress update) within a single request.
+
+### Log Formats
+- **Human-Readable (Default):** Optimized for terminal viewing.
+- **JSON:** Structured output for log aggregators (e.g., Loki, ELK). Enable with `KOSYNC_JSON_LOG=true`.
 
 ### Log Levels
-You can adjust the detail of logs using the `KOSYNC_LOG_LEVEL` environment variable:
-- `debug`: Shows every raw request and database interaction (Best for troubleshooting).
-- `info`: Shows standard startup and access logs (Recommended for production).
-- `warn`/`error`: Only logs problems.
+- **`debug`:** Shows granular details including database interactions, auth success events, and timestamp-based sync resolution (e.g., why an update was skipped).
+- **`info`:** Recommended for production. Shows server startup, CLI successes, and completed HTTP requests.
+- **`warn`:** Logs handled issues like authentication failures (401), rate-limit hits, or storage cap pruning events.
+- **`error`:** Logs critical failures like database write errors or server-side panics.
+
+### Example Logs
+
+**Progress Updated (INFO):**
+`time=2026-05-27T10:00:00Z level=INFO msg="progress updated" method=PUT path="/syncs/progress" request_id=af7e5b5b username=alice document=doc123 percentage=0.5 source=API`
+
+**Storage Cap Pruning (WARN):**
+`time=2026-05-27T10:05:00Z level=WARN msg="storage cap exceeded" database_path="/data/kosync.db" current_size_mb=10.5 cap_mb=10.0`
+
+**Sync Resolution (DEBUG):**
+`time=2026-05-27T10:10:00Z level=DEBUG msg="upserting progress" username=alice document=doc123 percentage=0.5 timestamp=1779940888`
 
 ### Unified Logging (Shared Log File)
 Because the server and CLI commands run as separate processes, their logs normally appear in the terminal where they are executed. To unify all logs in a single file, use the `KOSYNC_LOG_PATH` environment variable.
 
 When `KOSYNC_LOG_PATH` is set, logs will be written to **both** the console (stdout) and the specified file.
-
-**Example Usage:**
-```bash
-# Start the server with a log file
-export KOSYNC_LOG_PATH=kosync.log
-./kosync &
-
-# Run CLI commands using the same log path
-KOSYNC_LOG_PATH=kosync.log ./kosync create-user newuser
-```
 
 ---
 
