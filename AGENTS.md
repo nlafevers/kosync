@@ -18,6 +18,18 @@ KOSYNC is maintained alongside KOPDS with a maximum-uniformity goal. Functions t
   - **Deployment:** Ships as a standalone, single-executable binary for bare-metal execution, or in a Docker container.
 - **Logging:** Use Go's standard `log/slog` package for structured logs, preserving request-scoped fields, shutdown events, and storage maintenance diagnostics across both KOSYNC and KOPDS.
 
+## Logging Strategy
+
+KOSYNC uses the standard library `log/slog` for structured logging across the entire application.
+- **Uniformity:** Identical logging patterns and field names are used in both KOPDS and KOSYNC.
+- **Request Context:** Every HTTP request is assigned a unique `request_id`. A request-scoped logger is stored in the context and should be retrieved via `api.GetLogger(ctx)`.
+- **Layers:**
+    - **Middleware:** Outermost `LoggingMiddleware` logs request completion (INFO for 2xx/3xx, WARN for 4xx, ERROR for 5xx) with `duration` and `status_code`.
+    - **Handlers:** Log high-level business events (e.g., "progress retrieved") at INFO level using the request-scoped logger.
+    - **Storage:** Logs granular diagnostic data (e.g., SQL queries, storage cap checks) at DEBUG level.
+- **CLI:** All CLI operations log success at INFO and failure at WARN using shared helpers in `internal/logger/cli.go`.
+- **Fields:** Use stable field names: `method`, `path`, `status_code`, `duration`, `request_id`, `user`, `username`, `operation`, `source` ("CLI" or "API"), and `error`.
+
 ## Reverse Engineering
 Since the goal of this project is to replace an existing server application and talk to an existing client application, what we know about the content of their communications is listed below.
 
