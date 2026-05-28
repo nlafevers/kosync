@@ -11,8 +11,8 @@
 .idea/
 
 # AI files
-#AGENTS.md
-#GEMINI.md
+# AGENT.md
+# GEMINI.md
 CLAUDE.md
 LLAMA.md
 MISTRAL.md
@@ -23,6 +23,8 @@ ROUGE.md
 SANTACODER.md
 T5.md
 UL2.md
+.antigravitycli/
+
 
 # Binaries for programs and plugins
 *.exe
