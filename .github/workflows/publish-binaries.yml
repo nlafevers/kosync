@@ -39,7 +39,7 @@ jobs:
           # 1. Download dependencies from the root (where go.mod is)
           go mod download
           
-          BINARY_NAME="kopds-${{ matrix.goos }}-${{ matrix.goarch }}"
+          BINARY_NAME="kosync-${{ matrix.goos }}-${{ matrix.goarch }}"
           if [ "${{ matrix.goos }}" = "windows" ]; then
             BINARY_NAME="$BINARY_NAME.exe"
           fi
@@ -48,7 +48,7 @@ jobs:
           mkdir -p dist
           
           # 3. Build pointing to the SUBDIRECTORY path
-          go build -ldflags="-s -w" -o "dist/$BINARY_NAME" ./cmd/kopds
+          go build -ldflags="-s -w" -o "dist/$BINARY_NAME" ./cmd/kosync
 
       - name: Upload Artifacts (Internal)
         uses: actions/upload-artifact@v4
