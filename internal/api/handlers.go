@@ -156,9 +156,11 @@ func HandleUpdateProgress(storage *database.Storage, cfg *config.Config) http.Ha
 			return
 		}
 
-		// Set server-side timestamp if not provided or if we want to ensure server-side truth
-		// KOReader might send a timestamp, but the server-side arrival time is often preferred for sync logic.
-		p.Timestamp = time.Now().Unix()
+		// Set server-side timestamp if not provided.
+		// If the client provides a timestamp, we respect it for multi-device sync logic.
+		if p.Timestamp == 0 {
+			p.Timestamp = time.Now().Unix()
+		}
 
 		if err := storage.UpsertProgress(username, p); err != nil {
 			log.Error("failed to upsert progress", "username", username, "document", p.Document, "error", err, "source", "API")

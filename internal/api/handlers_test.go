@@ -278,3 +278,64 @@ func TestHandleUpdateProgress(t *testing.T) {
 		}
 	})
 }
+
+func TestProgressTimestampConflict(t *testing.T) {
+	storage, _ := setupTestDB(t)
+	defer storage.Close()
+	cfg := &config.Config{DatabasePath: "test.db", StorageCapMB: 10}
+
+	username := "testuser"
+	doc := "doc123"
+
+	// Helper to send PUT request
+	sendPut := func(percentage float64, timestamp int64) *httptest.ResponseRecorder {
+		p := models.Progress{
+			Document:   doc,
+			Percentage: percentage,
+			Progress:   "loc1",
+			Timestamp:  timestamp,
+		}
+		body, _ := json.Marshal(p)
+		req := httptest.NewRequest("PUT", "/syncs/progress", bytes.NewBuffer(body))
+		req = req.WithContext(context.WithValue(req.Context(), ContextKeyUser, username))
+		w := httptest.NewRecorder()
+		HandleUpdateProgress(storage, cfg).ServeHTTP(w, req)
+		return w
+	}
+
+	// Helper to get progress
+	getProgress := func() *models.Progress {
+		req := httptest.NewRequest("GET", "/syncs/progress/"+doc, nil)
+		req = req.WithContext(context.WithValue(req.Context(), ContextKeyUser, username))
+		req.SetPathValue("document", doc)
+		w := httptest.NewRecorder()
+		HandleGetProgress(storage).ServeHTTP(w, req)
+		var p models.Progress
+		json.NewDecoder(w.Body).Decode(&p)
+		return &p
+	}
+
+	// 1. Initial Sync
+	sendPut(0.5, 1000)
+
+	// 2. Older Update
+	sendPut(0.4, 900)
+	p := getProgress()
+	if p.Percentage != 0.5 {
+		t.Errorf("expected 0.5, got %f (older timestamp update applied)", p.Percentage)
+	}
+
+	// 3. Newer Update
+	sendPut(0.6, 1100)
+	p = getProgress()
+	if p.Percentage != 0.6 {
+		t.Errorf("expected 0.6, got %f", p.Percentage)
+	}
+
+	// 4. Equal Timestamp (Strictly greater logic means this should NOT update)
+	sendPut(0.7, 1100)
+	p = getProgress()
+	if p.Percentage != 0.6 {
+		t.Errorf("expected 0.6, got %f (equal timestamp update applied)", p.Percentage)
+	}
+}
