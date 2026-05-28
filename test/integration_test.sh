@@ -31,7 +31,7 @@ CLI_OUTPUT=$(KOSYNC_DATABASE_PATH=$DB ./$BIN_NAME create-user "$USER" --password
 $PASS
 EOF
 )
-if [[ $CLI_OUTPUT != *"User '$USER' created/updated successfully."* ]]; then
+if [[ $CLI_OUTPUT != *"User '$USER' created successfully."* ]]; then
     echo "CLI user creation FAILED: $CLI_OUTPUT"
     exit 1
 fi
@@ -43,12 +43,18 @@ export KOSYNC_DATABASE_PATH=$DB
 export KOSYNC_LOG_LEVEL=debug
 export KOSYNC_DISABLE_REGISTRATION=true
 
-./$BIN_NAME &
+./$BIN_NAME > server.log 2>&1 &
 PID=$!
 sleep 2
 
 echo "Testing Auth..."
 curl -s -X GET $URL/users/auth -H "X-AUTH-USER:$USER" -H "X-AUTH-KEY:$PASS" -H "Accept: application/vnd.koreader.v1+json" > /dev/null
+
+echo "Testing Auth Failure..."
+curl -s -X GET $URL/users/auth -H "X-AUTH-USER:$USER" -H "X-AUTH-KEY:wrongpass" -H "Accept: application/vnd.koreader.v1+json" > /dev/null
+
+echo "Testing 404..."
+curl -s -X GET $URL/notfound -H "X-AUTH-USER:$USER" -H "X-AUTH-KEY:$PASS" -H "Accept: application/vnd.koreader.v1+json" > /dev/null
 
 echo "Testing Progress Update..."
 curl -s -X PUT $URL/syncs/progress -H "X-AUTH-USER:$USER" -H "X-AUTH-KEY:$PASS" -H "Content-Type: application/json" -H "Accept: application/vnd.koreader.v1+json" -d "{\"document\":\"$DOC\",\"percentage\":0.5,\"progress\":\"loc1\"}" > /dev/null
@@ -58,7 +64,11 @@ RESP=$(curl -s -X GET $URL/syncs/progress/$DOC -H "X-AUTH-USER:$USER" -H "X-AUTH
 
 if [[ $RESP == *'"percentage":0.5'* ]]; then
     echo "Integration test PASSED"
+    echo "--- Server Logs ---"
+    cat server.log
 else
     echo "Integration test FAILED: $RESP"
+    echo "--- Server Logs ---"
+    cat server.log
     exit 1
 fi
