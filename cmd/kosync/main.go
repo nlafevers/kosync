@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"io"
@@ -28,7 +29,7 @@ func main() {
 		fmt.Printf("Error loading config: %v\n", err)
 		os.Exit(1)
 	}
-	logger.New(cfg.LogLevel, cfg.JSONLog, cfg.LogPath)
+	log := logger.New(cfg.LogLevel, cfg.JSONLog, cfg.LogPath)
 
 	// Handle CLI commands
 	if len(os.Args) > 1 {
@@ -36,7 +37,7 @@ func main() {
 		return
 	}
 
-	slog.Info("Starting KOSYNC",
+	log.Info("Starting KOSYNC",
 		"app_name", appName,
 		"port", cfg.Port,
 		"database_path", cfg.DatabasePath,
@@ -45,18 +46,24 @@ func main() {
 		"log_path", cfg.LogPath,
 	)
 
-	storage, err := database.InitDB(cfg.DatabasePath, true)
+	db, err := database.OpenSQLite(cfg.DatabasePath, true)
 	if err != nil {
-		slog.Error("failed to initialize database", "error", err)
+		log.Error("Failed to connect to database", "error", err)
 		os.Exit(1)
 	}
-	defer storage.Close()
+	defer db.Close()
 
-	slog.Info("Database initialized",
+	if err := database.Migrate(db); err != nil {
+		log.Error("Failed to run migrations", "error", err)
+		os.Exit(1)
+	}
+	log.Info("Database initialized",
 		"database_path", cfg.DatabasePath,
 		"migration_status", "success",
 		"storage_cap_mb", cfg.StorageCapMB,
 	)
+
+	storage := database.NewStorage(db, log)
 
 	mux := http.NewServeMux()
 
@@ -80,7 +87,7 @@ func main() {
 	handler = api.ContentTypeMiddleware(handler)
 
 	mux.Handle("/", handler)
-	slog.Info("server listening", "port", cfg.Port)
+	log.Info("Server listening", "port", cfg.Port)
 
 	// Graceful shutdown
 	server := &http.Server{Addr: fmt.Sprintf(":%d", cfg.Port), Handler: api.LoggingMiddleware(mux)}
@@ -89,21 +96,21 @@ func main() {
 		signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
 		sig := <-sigChan
-		slog.Info("Shutdown signal received", "signal", sig.String())
-		slog.Info("Shutting down server...")
+		log.Info("Shutdown signal received", "signal", sig.String())
+		log.Info("Shutting down server...")
 
 		if err := server.Shutdown(context.Background()); err != nil {
-			slog.Error("Server shutdown failed", "error", err)
+			log.Error("Server shutdown failed", "error", err)
 		} else {
-			slog.Info("Server exited cleanly")
+			log.Info("Server exited cleanly")
 		}
 	}()
 
 	if err := server.ListenAndServe(); err != http.ErrServerClosed {
-		slog.Error("server failed", "error", err)
+		log.Error("Server failed", "error", err)
 		os.Exit(1)
 	}
-	slog.Info("server exited cleanly")
+	log.Info("Server exited cleanly")
 }
 
 func runCLI(cfg *config.Config) {
@@ -167,8 +174,8 @@ func printUsage() {
 
 func createUser(cfg *config.Config, username, password string) {
 	operation := "create-user"
-	storage := openCLIStorage(cfg)
-	defer storage.Close()
+	db, storage := openCLIStorage(cfg)
+	defer db.Close()
 
 	hash, err := api.HashPassword(password)
 	if err != nil {
@@ -191,8 +198,8 @@ func createUser(cfg *config.Config, username, password string) {
 }
 func deleteUser(cfg *config.Config, username string) {
 	operation := "delete-user"
-	storage := openCLIStorage(cfg)
-	defer storage.Close()
+	db, storage := openCLIStorage(cfg)
+	defer db.Close()
 
 	if err := storage.DeleteUser(username); err != nil {
 		logger.LogCLIFailure(nil, operation, username, "failed to delete user: "+err.Error())
@@ -204,8 +211,8 @@ func deleteUser(cfg *config.Config, username string) {
 }
 func changePassword(cfg *config.Config, username, password string) {
 	operation := "change-password"
-	storage := openCLIStorage(cfg)
-	defer storage.Close()
+	db, storage := openCLIStorage(cfg)
+	defer db.Close()
 
 	hash, err := api.HashPassword(password)
 	if err != nil {
@@ -221,13 +228,20 @@ func changePassword(cfg *config.Config, username, password string) {
 	logger.LogCLISuccess(nil, operation, username)
 	fmt.Printf("Password for user '%s' updated successfully.\n", username)
 }
-func openCLIStorage(cfg *config.Config) *database.Storage {
-	storage, err := database.InitDB(cfg.DatabasePath, true)
+func openCLIStorage(cfg *config.Config) (*sql.DB, *database.Storage) {
+	db, err := database.OpenSQLite(cfg.DatabasePath, true)
 	if err != nil {
 		fmt.Printf("Failed to connect to database: %v\n", err)
 		os.Exit(1)
 	}
-	return storage
+
+	if err := database.Migrate(db); err != nil {
+		db.Close()
+		fmt.Printf("Failed to run migrations: %v\n", err)
+		os.Exit(1)
+	}
+
+	return db, database.NewStorage(db, slog.Default())
 }
 
 func passwordFromArgs(args []string, stdin io.Reader, stdout io.Writer) (string, error) {

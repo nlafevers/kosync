@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,6 +11,20 @@ import (
 	"kosync/internal/api"
 	"kosync/internal/database"
 )
+
+func openTestStorageReadOnly(t *testing.T, dbPath string) *database.Storage {
+	t.Helper()
+	db, err := database.OpenSQLite(dbPath, false)
+	if err != nil {
+		t.Fatalf("failed to connect to database: %v", err)
+	}
+	if err := database.Migrate(db); err != nil {
+		db.Close()
+		t.Fatalf("failed to run migrations: %v", err)
+	}
+	t.Cleanup(func() { db.Close() })
+	return database.NewStorage(db, slog.Default())
+}
 
 func TestCLIUserManagement(t *testing.T) {
 	// 1. Setup: Build binary
@@ -43,8 +58,7 @@ func TestCLIUserManagement(t *testing.T) {
 		}
 
 		// Verify in DB
-		s, _ := database.InitDB(dbPath, false)
-		defer s.Close()
+		s := openTestStorageReadOnly(t, dbPath)
 		hash, err := s.GetUserHash("clitest")
 		if err != nil {
 			t.Errorf("user not found in db: %v", err)
@@ -67,8 +81,7 @@ func TestCLIUserManagement(t *testing.T) {
 		}
 
 		// Verify in DB
-		s, _ := database.InitDB(dbPath, false)
-		defer s.Close()
+		s := openTestStorageReadOnly(t, dbPath)
 		hash, _ := s.GetUserHash("clitest")
 		if !api.CheckPassword(hash, "newclipass") {
 			t.Error("password update failed")
@@ -87,8 +100,7 @@ func TestCLIUserManagement(t *testing.T) {
 			t.Errorf("unexpected output: %s", output)
 		}
 
-		s, _ := database.InitDB(dbPath, false)
-		defer s.Close()
+		s := openTestStorageReadOnly(t, dbPath)
 		hash, _ := s.GetUserHash("clitest")
 		if api.CheckPassword(hash, "failpass") {
 			t.Error("password was updated for existing user")
@@ -106,8 +118,7 @@ func TestCLIUserManagement(t *testing.T) {
 		}
 
 		// Verify in DB
-		s, _ := database.InitDB(dbPath, false)
-		defer s.Close()
+		s := openTestStorageReadOnly(t, dbPath)
 		_, err = s.GetUserHash("clitest")
 		if err == nil {
 			t.Error("user still exists after deletion")

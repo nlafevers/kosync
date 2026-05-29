@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"testing"
 	"time"
@@ -12,11 +13,16 @@ import (
 func TestEnforceStorageCapIntegration(t *testing.T) {
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "test.db")
-	storage, err := InitDB(dbPath, true)
+	db, err := OpenSQLite(dbPath, true)
 	if err != nil {
-		t.Fatalf("failed to init db: %v", err)
+		t.Fatalf("failed to connect to database: %v", err)
 	}
-	defer storage.Close()
+	if err := Migrate(db); err != nil {
+		db.Close()
+		t.Fatalf("failed to run migrations: %v", err)
+	}
+	storage := NewStorage(db, slog.Default())
+	defer db.Close()
 
 	// Bloat the database with dummy progress records
 	// We need enough data to exceed 1MB

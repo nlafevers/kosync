@@ -12,6 +12,9 @@ This project is being refactored alongside its sibling project so equivalent beh
 - `CheckPassword`
 - `logger.New`
 - `OpenSQLite`
+- `Migrate`
+- `NewSQLite`
+- `NewStorage`
 - `EnforceStorageCap`
 - `vacuum`
 - `resolveExecutablePaths`
@@ -39,5 +42,6 @@ This project is being refactored alongside its sibling project so equivalent beh
 - `pruneStorageCapRecords` intentionally differs because KOPDS prunes catalog sync-state rows while KOSYNC prunes progress rows.
 - `config.Load` intentionally differs because each project has different domain settings; shared path-resolution helpers remain identical.
 - KOPDS has a repository-level `EnforceStorageCap` adapter to satisfy the book repository interface; KOSYNC calls storage directly.
+- Database lifecycle is `OpenSQLite` → `Migrate` → inject (`NewBookRepository` / `NewUserRepository` on KOPDS; `NewStorage` on KOSYNC). There is no `InitDB` helper.
 - Similarity matches involving unrelated `Close` methods are false positives and are not uniformity targets.
 - Both KOPDS and KOSYNC `create-user` CLI commands fail if the user already exists to prevent accidental overwrites. Use `change-password` to update.

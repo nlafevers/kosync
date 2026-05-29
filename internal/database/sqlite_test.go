@@ -2,6 +2,7 @@ package database
 
 import (
 	"bytes"
+	"database/sql"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -12,14 +13,24 @@ import (
 	"kosync/internal/models"
 )
 
+func openTestStorage(t *testing.T, dbPath string) (*Storage, *sql.DB) {
+	t.Helper()
+	db, err := OpenSQLite(dbPath, true)
+	if err != nil {
+		t.Fatalf("failed to connect to database: %v", err)
+	}
+	if err := Migrate(db); err != nil {
+		db.Close()
+		t.Fatalf("failed to run migrations: %v", err)
+	}
+	return NewStorage(db, slog.Default()), db
+}
+
 func TestStorage(t *testing.T) {
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "test.db")
-	storage, err := InitDB(dbPath, true)
-	if err != nil {
-		t.Fatalf("failed to init db: %v", err)
-	}
-	defer storage.Close()
+	storage, db := openTestStorage(t, dbPath)
+	defer db.Close()
 
 	t.Run("Create and Get User", func(t *testing.T) {
 		err := storage.CreateUser("testuser", "hash123")
@@ -97,11 +108,8 @@ func TestStorageLogsDatabaseOperations(t *testing.T) {
 
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "logging.db")
-	storage, err := InitDB(dbPath, true)
-	if err != nil {
-		t.Fatalf("failed to init db: %v", err)
-	}
-	defer storage.Close()
+	storage, db := openTestStorage(t, dbPath)
+	defer db.Close()
 
 	if err := storage.CreateUser("alice", "hash123"); err != nil {
 		t.Fatalf("failed to create user: %v", err)
@@ -115,7 +123,7 @@ func TestStorageLogsDatabaseOperations(t *testing.T) {
 		t.Fatalf("expected missing progress to return nil error, got %v", err)
 	}
 
-	storage.Close()
+	db.Close()
 	if _, err := storage.GetProgress("alice", "missing-doc"); err == nil {
 		t.Fatal("expected closed database lookup to error")
 	}
@@ -137,8 +145,8 @@ func TestStorageLogsDatabaseOperations(t *testing.T) {
 func TestStorageCap(t *testing.T) {
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "cap_test.db")
-	storage, _ := InitDB(dbPath, true)
-	defer storage.Close()
+	storage, db := openTestStorage(t, dbPath)
+	defer db.Close()
 
 	storage.CreateUser("user1", "hash")
 	for i := 0; i < 100; i++ {
@@ -166,11 +174,8 @@ func TestStorageCapLogsMaintenance(t *testing.T) {
 
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "cap_logging.db")
-	storage, err := InitDB(dbPath, true)
-	if err != nil {
-		t.Fatalf("failed to init db: %v", err)
-	}
-	defer storage.Close()
+	storage, db := openTestStorage(t, dbPath)
+	defer db.Close()
 
 	if err := storage.CreateUser("user1", "hash"); err != nil {
 		t.Fatalf("failed to create user: %v", err)

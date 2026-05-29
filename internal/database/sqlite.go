@@ -59,18 +59,14 @@ func OpenSQLite(path string, allowCreate bool) (*sql.DB, error) {
 	return db, nil
 }
 
-func InitDB(path string, allowCreate bool) (*Storage, error) {
-	db, err := OpenSQLite(path, allowCreate)
-	if err != nil {
-		return nil, err
-	}
+// NewStorage creates a new storage wrapper.
+func NewStorage(db *sql.DB, log *slog.Logger) *Storage {
+	return &Storage{db: db, log: log}
+}
 
-	if err := Migrate(db); err != nil {
-		db.Close()
-		return nil, err
-	}
-
-	return &Storage{db: db, log: slog.Default()}, nil
+// NewSQLite creates a new SQLite database connection.
+func NewSQLite(path string, allowCreate bool) (*sql.DB, error) {
+	return OpenSQLite(path, allowCreate)
 }
 
 func Migrate(db *sql.DB) error {
@@ -102,10 +98,6 @@ func Migrate(db *sql.DB) error {
 	}
 
 	return nil
-}
-
-func (s *Storage) Close() error {
-	return s.db.Close()
 }
 
 func (s *Storage) logger() *slog.Logger {

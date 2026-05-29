@@ -8,7 +8,6 @@ import (
 
 func TestAuthMiddleware(t *testing.T) {
 	storage, _ := setupTestDB(t)
-	defer storage.Close()
 
 	// Seed user
 	hash, _ := HashPassword("testpass")

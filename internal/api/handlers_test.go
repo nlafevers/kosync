@@ -18,16 +18,21 @@ import (
 func setupTestDB(t *testing.T) (*database.Storage, string) {
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "test.db")
-	storage, err := database.InitDB(dbPath, true)
+	db, err := database.OpenSQLite(dbPath, true)
 	if err != nil {
-		t.Fatalf("failed to init db: %v", err)
+		t.Fatalf("failed to connect to database: %v", err)
 	}
+	if err := database.Migrate(db); err != nil {
+		db.Close()
+		t.Fatalf("failed to run migrations: %v", err)
+	}
+	storage := database.NewStorage(db, slog.Default())
+	t.Cleanup(func() { db.Close() })
 	return storage, dbPath
 }
 
 func TestHandleUserCreate(t *testing.T) {
 	storage, _ := setupTestDB(t)
-	defer storage.Close()
 	cfg := &config.Config{DisableRegistration: false}
 
 	t.Run("Successful Registration", func(t *testing.T) {
@@ -97,8 +102,6 @@ func TestHandleAuth(t *testing.T) {
 
 func TestHandleGetProgress(t *testing.T) {
 	storage, _ := setupTestDB(t)
-	defer storage.Close()
-
 	// Seed data
 	hash, _ := HashPassword("testpass")
 	storage.CreateUser("testuser", hash)
@@ -191,8 +194,6 @@ func TestHandleGetProgressLogsSuccess(t *testing.T) {
 	defer slog.SetDefault(oldDefault)
 
 	storage, _ := setupTestDB(t)
-	defer storage.Close()
-
 	hash, _ := HashPassword("testpass")
 	storage.CreateUser("testuser", hash)
 	storage.UpsertProgress("testuser", models.Progress{Document: "doc1", Percentage: 0.5})
@@ -240,7 +241,6 @@ func TestHandleGetProgressLogsSuccess(t *testing.T) {
 
 func TestHandleUpdateProgress(t *testing.T) {
 	storage, dbPath := setupTestDB(t)
-	defer storage.Close()
 	cfg := &config.Config{DatabasePath: dbPath, StorageCapMB: 0}
 
 	t.Run("Success", func(t *testing.T) {
@@ -281,7 +281,6 @@ func TestHandleUpdateProgress(t *testing.T) {
 
 func TestProgressTimestampConflict(t *testing.T) {
 	storage, _ := setupTestDB(t)
-	defer storage.Close()
 	cfg := &config.Config{DatabasePath: "test.db", StorageCapMB: 10}
 
 	username := "testuser"
