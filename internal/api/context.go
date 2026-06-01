@@ -28,11 +28,3 @@ func GetUser(ctx context.Context) string {
 	}
 	return ""
 }
-
-// GetRequestID returns the request ID from context.
-func GetRequestID(ctx context.Context) string {
-	if id, ok := ctx.Value(ContextKeyRequestID).(string); ok {
-		return id
-	}
-	return ""
-}
