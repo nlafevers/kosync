@@ -563,6 +563,114 @@ func TestProgressTimestampConflict(t *testing.T) {
 	}
 }
 
+// TestHandleUpdateProgressStorageCapSkippedWhenStale verifies that EnforceStorageCap
+// is NOT called when UpsertProgress returns changed=false (stale timestamp).
+// It uses a non-existent DatabasePath with a non-zero cap: if EnforceStorageCap
+// were called it would fail with an os.Stat error and log an error, but since
+// progress did not change the cap must be skipped and the response must still
+// be 200 OK.
+func TestHandleUpdateProgressStorageCapSkippedWhenStale(t *testing.T) {
+	var buf bytes.Buffer
+	logger := slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	oldDefault := slog.Default()
+	slog.SetDefault(logger)
+	defer slog.SetDefault(oldDefault)
+
+	storage, _ := setupTestDB(t)
+	// Use a non-existent path with a positive cap so that any os.Stat call would fail.
+	cfg := &config.Config{DatabasePath: "/nonexistent/path/kosync.db", StorageCapMB: 1}
+	username := "capskipuser"
+
+	hash, _ := HashPassword("pass")
+	if err := storage.CreateUser(username, hash); err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
+
+	sendPut := func(percentage float64, ts int64) *httptest.ResponseRecorder {
+		p := models.Progress{
+			Document:   "capskip-doc",
+			Percentage: percentage,
+			Timestamp:  ts,
+		}
+		body, _ := json.Marshal(p)
+		req := httptest.NewRequest("PUT", "/syncs/progress", bytes.NewBuffer(body))
+		req = req.WithContext(context.WithValue(req.Context(), ContextKeyUser, username))
+		w := httptest.NewRecorder()
+		HandleUpdateProgress(storage, cfg).ServeHTTP(w, req)
+		return w
+	}
+
+	// Initial insert at timestamp 2000 — progress changes, EnforceStorageCap would
+	// be called. The non-existent path will log an error but must not affect the
+	// HTTP response.
+	w := sendPut(0.5, 2000)
+	if w.Code != http.StatusOK {
+		t.Fatalf("initial insert: expected 200 OK, got %d", w.Code)
+	}
+
+	// Reset the log buffer and send a stale update (timestamp 1000 < 2000).
+	// EnforceStorageCap must NOT be called — if it were, it would log an error
+	// for the non-existent path.
+	buf.Reset()
+	w = sendPut(0.3, 1000)
+	if w.Code != http.StatusOK {
+		t.Errorf("stale update: expected 200 OK, got %d", w.Code)
+	}
+
+	// Verify that no storage-cap error was logged for the stale update.
+	output := buf.String()
+	if strings.Contains(output, "failed to enforce storage cap") {
+		t.Errorf("EnforceStorageCap must not be called for stale updates, but got log: %s", output)
+	}
+	if strings.Contains(output, "failed to inspect database file size") {
+		t.Errorf("EnforceStorageCap must not be called for stale updates (os.Stat log found): %s", output)
+	}
+}
+
+// TestHandleUpdateProgressStorageCapCalledWhenChanged verifies that EnforceStorageCap
+// IS called when UpsertProgress returns changed=true. It uses a real DatabasePath
+// with cap=0 so the call returns immediately without side effects, and checks that
+// the handler returns 200 OK and logs a progress-updated message.
+func TestHandleUpdateProgressStorageCapCalledWhenChanged(t *testing.T) {
+	var buf bytes.Buffer
+	logger := slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	oldDefault := slog.Default()
+	slog.SetDefault(logger)
+	defer slog.SetDefault(oldDefault)
+
+	storage, dbPath := setupTestDB(t)
+	// cap=0 disables pruning so EnforceStorageCap returns immediately (no side effects).
+	cfg := &config.Config{DatabasePath: dbPath, StorageCapMB: 0}
+	username := "capchangeduser"
+
+	hash, _ := HashPassword("pass")
+	if err := storage.CreateUser(username, hash); err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
+
+	p := models.Progress{
+		Document:   "cap-changed-doc",
+		Percentage: 0.5,
+		Timestamp:  3000,
+	}
+	body, _ := json.Marshal(p)
+	req := httptest.NewRequest("PUT", "/syncs/progress", bytes.NewBuffer(body))
+	req = req.WithContext(context.WithValue(req.Context(), ContextKeyUser, username))
+	w := httptest.NewRecorder()
+	HandleUpdateProgress(storage, cfg).ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d", w.Code)
+	}
+
+	// Verify the progress-updated log message is present, confirming the changed
+	// branch executed (and thus EnforceStorageCap was reached).
+	output := buf.String()
+	if !strings.Contains(output, "progress updated") {
+		t.Errorf("expected 'progress updated' log message for changed progress, got: %s", output)
+	}
+}
+
 // TestHandleUpdateProgressStaleLogging verifies that a stale progress update
 // returns 200 OK and logs a stale-ignored message.
 func TestHandleUpdateProgressStaleLogging(t *testing.T) {
