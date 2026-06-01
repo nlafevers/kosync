@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"kosync/internal/api"
-	"kosync/internal/database"
+	"github.com/nlafevers/kosync/internal/api"
+	"github.com/nlafevers/kosync/internal/database"
 )
 
 func openTestStorageReadOnly(t *testing.T, dbPath string) *database.Storage {

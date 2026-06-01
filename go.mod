@@ -1,4 +1,4 @@
-module kosync
+module github.com/nlafevers/kosync
 
 go 1.25.0
 

@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"kosync/internal/models"
+	"github.com/nlafevers/kosync/internal/models"
 )
 
 func openTestStorage(t *testing.T, dbPath string) (*Storage, *sql.DB) {

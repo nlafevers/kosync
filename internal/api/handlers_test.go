@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"kosync/internal/config"
-	"kosync/internal/database"
-	"kosync/internal/models"
+	"github.com/nlafevers/kosync/internal/config"
+	"github.com/nlafevers/kosync/internal/database"
+	"github.com/nlafevers/kosync/internal/models"
 
 	"golang.org/x/time/rate"
 )

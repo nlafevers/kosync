@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"kosync/internal/models"
+	"github.com/nlafevers/kosync/internal/models"
 
 	_ "modernc.org/sqlite"
 )

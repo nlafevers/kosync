@@ -14,10 +14,10 @@ import (
 	"syscall"
 	"time"
 
-	"kosync/internal/api"
-	"kosync/internal/config"
-	"kosync/internal/database"
-	"kosync/internal/logger"
+	"github.com/nlafevers/kosync/internal/api"
+	"github.com/nlafevers/kosync/internal/config"
+	"github.com/nlafevers/kosync/internal/database"
+	"github.com/nlafevers/kosync/internal/logger"
 
 	"golang.org/x/term"
 	"golang.org/x/time/rate"

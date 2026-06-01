@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"kosync/internal/database"
+	"github.com/nlafevers/kosync/internal/database"
 
 	"golang.org/x/time/rate"
 )

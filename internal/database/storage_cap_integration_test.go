@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"kosync/internal/models"
+	"github.com/nlafevers/kosync/internal/models"
 )
 
 func TestEnforceStorageCapIntegration(t *testing.T) {
