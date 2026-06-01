@@ -6,10 +6,12 @@ This project is being refactored alongside its sibling project so equivalent beh
 
 - `runCLI`
 - `printUsage`
+- `openCLIStorage`
 - `passwordFromArgs`
 - `readPasswordInteractively`
 - `HashPassword`
 - `CheckPassword`
+- `UpdatePassword(username, passwordHash string) error`
 - `logger.New`
 - `OpenSQLite`
 - `Migrate`
@@ -19,16 +21,24 @@ This project is being refactored alongside its sibling project so equivalent beh
 - `vacuum`
 - `resolveExecutablePaths`
 - `resolvePath`
+- `generateRequestID`
+- `IPRateLimiter`
+- `NewIPRateLimiter`
+- `GetLimiter`
+- `clientIP`
+- `RateLimitMiddleware`
 - HTTP Routing (native `net/http.ServeMux`)
+
+## Currently Identical Config Fields
+
+- `RateLimitEnabled`
+- `RateLimitPerMinute`
+- `RateLimitBurst`
+- `TrustProxyHeaders`
 
 ## High-Confidence Standardization Targets
 
-- CLI usage and command dispatch: `printUsage`, `runCLI`, and user-command helpers
-- Password helpers: `HashPassword` and `CheckPassword`
-- Logger construction: `logger.New`
 - Config loading and path resolution
-- SQLite open/create/permission/WAL setup
-- Storage-cap threshold handling and VACUUM flow
 - CLI user-management output and error behavior
 
 ## Intentional Project Boundaries
@@ -42,6 +52,10 @@ This project is being refactored alongside its sibling project so equivalent beh
 - `pruneStorageCapRecords` intentionally differs because KOPDS prunes catalog sync-state rows while KOSYNC prunes progress rows.
 - `config.Load` intentionally differs because each project has different domain settings; shared path-resolution helpers remain identical.
 - KOPDS has a repository-level `EnforceStorageCap` adapter to satisfy the book repository interface; KOSYNC calls storage directly.
+- `EnforceStorageCap` returns early if `capMB <= 0` at the top of the function, before any file I/O. Both apps share this guard.
 - Database lifecycle is `OpenSQLite` → `Migrate` → inject (`NewBookRepository` / `NewUserRepository` on KOPDS; `NewStorage` on KOSYNC). There is no `InitDB` helper.
+- `generateRequestID` allocates 16 bytes via `crypto/rand.Read`, encodes as hex, and falls back to a timestamp-based ID on failure. Identical in both apps.
+- `PRAGMA foreign_keys=ON` is set during SQLite connection init alongside WAL mode in both apps.
+- Rate-limit helpers (`IPRateLimiter`, `NewIPRateLimiter`, `GetLimiter`, `clientIP`, `RateLimitMiddleware`) are copy-paste identical. Config fields `RateLimitEnabled`, `RateLimitPerMinute`, `RateLimitBurst`, and `TrustProxyHeaders` use the same names and defaults.
 - Similarity matches involving unrelated `Close` methods are false positives and are not uniformity targets.
 - Both KOPDS and KOSYNC `create-user` CLI commands fail if the user already exists to prevent accidental overwrites. Use `change-password` to update.
