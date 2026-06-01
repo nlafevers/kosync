@@ -97,6 +97,11 @@ func Migrate(db *sql.DB) error {
 		return fmt.Errorf("failed to create progress table: %w", err)
 	}
 
+	progressTimestampIndex := `CREATE INDEX IF NOT EXISTS idx_progress_timestamp ON progress(timestamp);`
+	if _, err := db.Exec(progressTimestampIndex); err != nil {
+		return fmt.Errorf("failed to create progress timestamp index: %w", err)
+	}
+
 	return nil
 }
 

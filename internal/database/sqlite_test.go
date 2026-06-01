@@ -273,6 +273,32 @@ func TestStorageCap(t *testing.T) {
 	}
 }
 
+func TestMigrateCreatesProgressTimestampIndex(t *testing.T) {
+	tmpDir := t.TempDir()
+	dbPath := filepath.Join(tmpDir, "index_test.db")
+
+	db, err := OpenSQLite(dbPath, true)
+	if err != nil {
+		t.Fatalf("failed to open database: %v", err)
+	}
+	defer db.Close()
+
+	if err := Migrate(db); err != nil {
+		t.Fatalf("failed to migrate database: %v", err)
+	}
+
+	var name string
+	err = db.QueryRow(
+		`SELECT name FROM sqlite_master WHERE type='index' AND name='idx_progress_timestamp'`,
+	).Scan(&name)
+	if err != nil {
+		t.Fatalf("idx_progress_timestamp not found in sqlite_master: %v", err)
+	}
+	if name != "idx_progress_timestamp" {
+		t.Errorf("expected index name 'idx_progress_timestamp', got %q", name)
+	}
+}
+
 func TestStorageCapLogsMaintenance(t *testing.T) {
 	var buf bytes.Buffer
 	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
