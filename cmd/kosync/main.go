@@ -221,7 +221,7 @@ func changePassword(cfg *config.Config, username, password string) {
 		os.Exit(1)
 	}
 	if err := storage.UpdatePassword(username, hash); err != nil {
-		logger.LogCLIFailure(nil, operation, username, "failed to update user password: "+err.Error())
+		logger.LogCLIFailure(nil, operation, username, "failed to update password: "+err.Error())
 		fmt.Printf("Failed to update password: %v\n", err)
 		os.Exit(1)
 	}
