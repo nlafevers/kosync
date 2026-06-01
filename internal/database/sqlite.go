@@ -44,7 +44,7 @@ func OpenSQLite(path string, allowCreate bool) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
-	if _, err := db.Exec("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;"); err != nil {
+	if _, err := db.Exec("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON;"); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("failed to enable WAL: %w", err)
 	}

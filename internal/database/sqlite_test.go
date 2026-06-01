@@ -142,6 +142,49 @@ func TestStorageLogsDatabaseOperations(t *testing.T) {
 		t.Fatalf("expected failed to get progress log, got %s", output)
 	}
 }
+func TestForeignKeyEnforcement(t *testing.T) {
+	tmpDir := t.TempDir()
+	dbPath := filepath.Join(tmpDir, "fk_test.db")
+
+	db, err := OpenSQLite(dbPath, true)
+	if err != nil {
+		t.Fatalf("failed to open database: %v", err)
+	}
+	defer db.Close()
+
+	if err := Migrate(db); err != nil {
+		t.Fatalf("failed to migrate database: %v", err)
+	}
+
+	t.Run("inserting progress with nonexistent username fails", func(t *testing.T) {
+		_, err := db.Exec(
+			`INSERT INTO progress (username, document, percentage, progress, device_id, device, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			"ghost", "doc123", 0.5, "loc1", "dev1", "ereader", 1000,
+		)
+		if err == nil {
+			t.Fatal("expected FK violation error, got nil")
+		}
+	})
+
+	t.Run("inserting progress with valid username succeeds", func(t *testing.T) {
+		_, err := db.Exec(
+			`INSERT INTO users (username, password_hash) VALUES (?, ?)`,
+			"validuser", "hash123",
+		)
+		if err != nil {
+			t.Fatalf("failed to insert user: %v", err)
+		}
+
+		_, err = db.Exec(
+			`INSERT INTO progress (username, document, percentage, progress, device_id, device, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			"validuser", "doc123", 0.5, "loc1", "dev1", "ereader", 1000,
+		)
+		if err != nil {
+			t.Fatalf("expected valid insert to succeed, got: %v", err)
+		}
+	})
+}
+
 func TestStorageCap(t *testing.T) {
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "cap_test.db")

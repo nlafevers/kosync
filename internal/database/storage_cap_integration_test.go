@@ -24,6 +24,11 @@ func TestEnforceStorageCapIntegration(t *testing.T) {
 	storage := NewStorage(db, slog.Default())
 	defer db.Close()
 
+	// Create the user referenced by progress records
+	if err := storage.CreateUserIfNotExists("testuser", "hash"); err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
+
 	// Bloat the database with dummy progress records
 	// We need enough data to exceed 1MB
 	for i := 0; i < 20000; i++ {
