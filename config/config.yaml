@@ -5,3 +5,7 @@ json_log: false
 log_path: ""
 disable_registration: true
 storage_cap_mb: 0
+rate_limit_enabled: true
+rate_limit_per_minute: 30
+rate_limit_burst: 10
+trust_proxy_headers: false

@@ -55,7 +55,7 @@ docker compose version
 *If you don't have them, follow the [official Docker installation guide](https://docs.docker.com/get-docker/).*
 
 #### 2. If installing Natively
-You need the Go compiler (v1.22+). To check your version, run:
+You need the Go compiler (v1.26.x or later). To check your version, run:
 ```bash
 go version
 ```
@@ -185,6 +185,10 @@ All settings can be provided as environment variables (prefixed with `KOSYNC_`).
 | `KOSYNC_LOG_PATH` | File path for unified logging. | - |
 | `KOSYNC_DISABLE_REGISTRATION` | Disable user registration endpoints. Set to `false` to allow new users to self-register. | `true` |
 | `KOSYNC_STORAGE_CAP_MB` | Maximum database size in MB (0 to disable). | `0` |
+| `KOSYNC_RATE_LIMIT_ENABLED` | Enable rate limiting on API requests. | `true` |
+| `KOSYNC_RATE_LIMIT_PER_MINUTE` | Maximum requests allowed per minute per IP. | `30` |
+| `KOSYNC_RATE_LIMIT_BURST` | Maximum burst size for rate limiting. | `10` |
+| `KOSYNC_TRUST_PROXY_HEADERS` | Trust `X-Forwarded-For` headers for client IP detection (enable only behind a trusted reverse proxy). | `false` |
 
 ### 3. Run as non-root user
 Create a dedicated user to run the service securely.
@@ -297,7 +301,7 @@ KOSYNC is built with a focus on simplicity and extreme efficiency.
 
 ### Architecture
 - **Layered Design:** Separates concerns into **Middleware** (Auth/Headers), **Handlers** (API Logic), and **Storage** (SQLite).
-- **Go 1.22+ Standard Library:** Uses the enhanced `net/http` router for performant, dependency-free routing.
+- **Go 1.26+ Standard Library:** Uses the enhanced `net/http` router for performant, dependency-free routing.
 - **Strict Protocol Compliance:** Enforces the custom `application/vnd.koreader.v1+json` MIME type required by the KOReader client.
 
 ### Data Integrity & Performance
