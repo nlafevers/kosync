@@ -17,6 +17,10 @@ type Config struct {
 	LogPath             string `mapstructure:"log_path"`
 	DisableRegistration bool   `mapstructure:"disable_registration"`
 	StorageCapMB        int    `mapstructure:"storage_cap_mb"`
+	RateLimitEnabled    bool   `mapstructure:"rate_limit_enabled"`
+	RateLimitPerMinute  int    `mapstructure:"rate_limit_per_minute"`
+	RateLimitBurst      int    `mapstructure:"rate_limit_burst"`
+	TrustProxyHeaders   bool   `mapstructure:"trust_proxy_headers"`
 }
 
 // Validate checks that the configuration values are within acceptable bounds.
@@ -54,6 +58,10 @@ func Load() (*Config, error) {
 	viper.SetDefault("log_path", "")
 	viper.SetDefault("disable_registration", true)
 	viper.SetDefault("storage_cap_mb", 0)
+	viper.SetDefault("rate_limit_enabled", true)
+	viper.SetDefault("rate_limit_per_minute", 30)
+	viper.SetDefault("rate_limit_burst", 10)
+	viper.SetDefault("trust_proxy_headers", false)
 
 	viper.SetEnvPrefix("KOSYNC")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))

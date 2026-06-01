@@ -9,10 +9,13 @@ import (
 	"net/http/httptest"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"kosync/internal/config"
 	"kosync/internal/database"
 	"kosync/internal/models"
+
+	"golang.org/x/time/rate"
 )
 
 func setupTestDB(t *testing.T) (*database.Storage, string) {
@@ -277,6 +280,104 @@ func TestHandleUpdateProgress(t *testing.T) {
 			t.Errorf("expected 400 Bad Request, got %d", w.Code)
 		}
 	})
+}
+
+// TestRateLimitMiddleware verifies that requests exceeding the burst receive 429,
+// and that requests within the burst succeed.
+func TestRateLimitMiddleware(t *testing.T) {
+	const burst = 3
+	// Very slow refill (1 token per hour) so no tokens are restored during the test.
+	limiter := NewIPRateLimiter(rate.Every(time.Hour), burst, false)
+
+	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	// Wrap in LoggingMiddleware so GetLogger does not fall back to a nil logger.
+	handler := LoggingMiddleware(RateLimitMiddleware(limiter, inner))
+
+	for i := 0; i < burst; i++ {
+		req := httptest.NewRequest("GET", "/", nil)
+		req.RemoteAddr = "192.0.2.1:1234"
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Errorf("request %d: expected 200, got %d", i+1, w.Code)
+		}
+	}
+
+	// The next request (beyond burst) must be rejected.
+	req := httptest.NewRequest("GET", "/", nil)
+	req.RemoteAddr = "192.0.2.1:1234"
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != http.StatusTooManyRequests {
+		t.Errorf("expected 429 after exceeding burst, got %d", w.Code)
+	}
+}
+
+// TestRateLimitMiddlewareXForwardedFor verifies that X-Forwarded-For is used
+// when trustProxy is enabled, so clients behind a proxy are limited by real IP.
+func TestRateLimitMiddlewareXForwardedFor(t *testing.T) {
+	const burst = 2
+	limiter := NewIPRateLimiter(rate.Every(time.Hour), burst, true)
+
+	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	handler := LoggingMiddleware(RateLimitMiddleware(limiter, inner))
+
+	realIP := "10.0.0.1"
+	for i := 0; i < burst; i++ {
+		req := httptest.NewRequest("GET", "/", nil)
+		req.RemoteAddr = "127.0.0.1:9999"
+		req.Header.Set("X-Forwarded-For", realIP+", 172.16.0.1")
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Errorf("request %d: expected 200, got %d", i+1, w.Code)
+		}
+	}
+
+	// Another request from the same real IP is rejected.
+	req := httptest.NewRequest("GET", "/", nil)
+	req.RemoteAddr = "127.0.0.1:9999"
+	req.Header.Set("X-Forwarded-For", realIP)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != http.StatusTooManyRequests {
+		t.Errorf("expected 429 for same real IP after burst, got %d", w.Code)
+	}
+
+	// A different real IP still gets its own fresh bucket.
+	req2 := httptest.NewRequest("GET", "/", nil)
+	req2.RemoteAddr = "127.0.0.1:9999"
+	req2.Header.Set("X-Forwarded-For", "10.0.0.2")
+	w2 := httptest.NewRecorder()
+	handler.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusOK {
+		t.Errorf("expected 200 for different real IP, got %d", w2.Code)
+	}
+}
+
+// TestRateLimitWithinBurst verifies that requests within the burst all succeed.
+func TestRateLimitWithinBurst(t *testing.T) {
+	const burst = 5
+	limiter := NewIPRateLimiter(rate.Every(time.Hour), burst, false)
+
+	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	handler := LoggingMiddleware(RateLimitMiddleware(limiter, inner))
+
+	for i := 0; i < burst; i++ {
+		req := httptest.NewRequest("GET", "/", nil)
+		req.RemoteAddr = "192.0.2.2:5678"
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Errorf("request %d within burst: expected 200, got %d", i+1, w.Code)
+		}
+	}
 }
 
 func TestProgressTimestampConflict(t *testing.T) {

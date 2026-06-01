@@ -20,6 +20,7 @@ import (
 	"kosync/internal/logger"
 
 	"golang.org/x/term"
+	"golang.org/x/time/rate"
 )
 
 const appName = "kosync"
@@ -77,12 +78,27 @@ func runServer(cfg *config.Config, log *slog.Logger) {
 
 	mux := http.NewServeMux()
 
+	// Build rate limiter (shared across public and protected routes).
+	var rateLimiter *api.IPRateLimiter
+	if cfg.RateLimitEnabled {
+		r := rate.Limit(float64(cfg.RateLimitPerMinute) / 60.0)
+		rateLimiter = api.NewIPRateLimiter(r, cfg.RateLimitBurst, cfg.TrustProxyHeaders)
+	}
+
+	// wrapRateLimit applies rate limiting only when enabled.
+	wrapRateLimit := func(h http.Handler) http.Handler {
+		if rateLimiter == nil {
+			return h
+		}
+		return api.RateLimitMiddleware(rateLimiter, h)
+	}
+
 	// Public routes
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	})
-	mux.HandleFunc("POST /users/create", api.HandleUserCreate(storage, cfg))
+	mux.Handle("POST /users/create", wrapRateLimit(api.HandleUserCreate(storage, cfg)))
 
 	// Protected routes
 	protected := http.NewServeMux()
@@ -95,6 +111,7 @@ func runServer(cfg *config.Config, log *slog.Logger) {
 	handler = api.AuthMiddleware(storage, handler)
 	handler = api.AcceptMiddleware(handler)
 	handler = api.ContentTypeMiddleware(handler)
+	handler = wrapRateLimit(handler)
 
 	mux.Handle("/", handler)
 

@@ -6,7 +6,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -153,17 +155,19 @@ func ContentTypeMiddleware(next http.Handler) http.Handler {
 
 // IPRateLimiter handles rate limiting per IP address.
 type IPRateLimiter struct {
-	ips map[string]*rate.Limiter
-	mu  sync.RWMutex
-	r   rate.Limit
-	b   int
+	ips        map[string]*rate.Limiter
+	mu         sync.RWMutex
+	r          rate.Limit
+	b          int
+	trustProxy bool
 }
 
-func NewIPRateLimiter(r rate.Limit, b int) *IPRateLimiter {
+func NewIPRateLimiter(r rate.Limit, b int, trustProxy bool) *IPRateLimiter {
 	return &IPRateLimiter{
-		ips: make(map[string]*rate.Limiter),
-		r:   r,
-		b:   b,
+		ips:        make(map[string]*rate.Limiter),
+		r:          r,
+		b:          b,
+		trustProxy: trustProxy,
 	}
 }
 
@@ -174,18 +178,40 @@ func (i *IPRateLimiter) GetLimiter(ip string) *rate.Limiter {
 
 	if !exists {
 		i.mu.Lock()
-		limiter = rate.NewLimiter(i.r, i.b)
-		i.ips[ip] = limiter
+		// Double-check after acquiring write lock.
+		if limiter, exists = i.ips[ip]; !exists {
+			limiter = rate.NewLimiter(i.r, i.b)
+			i.ips[ip] = limiter
+		}
 		i.mu.Unlock()
 	}
 
 	return limiter
 }
 
+// clientIP returns the client's IP address. If trustProxy is true and the
+// X-Forwarded-For header is present, the first (leftmost) address is used.
+// Otherwise the IP is taken from r.RemoteAddr.
+func clientIP(r *http.Request, trustProxy bool) string {
+	if trustProxy {
+		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			ip := strings.TrimSpace(strings.SplitN(xff, ",", 2)[0])
+			if ip != "" {
+				return ip
+			}
+		}
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return host
+}
+
 // RateLimitMiddleware applies rate limiting per IP.
 func RateLimitMiddleware(limiter *IPRateLimiter, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ip := r.RemoteAddr // In production with a proxy, this might need X-Forwarded-For handling
+		ip := clientIP(r, limiter.trustProxy)
 		if !limiter.GetLimiter(ip).Allow() {
 			GetLogger(r.Context()).Warn("rate limit exceeded", "ip", ip, "source", "API")
 			http.Error(w, "Too Many Requests", http.StatusTooManyRequests)
