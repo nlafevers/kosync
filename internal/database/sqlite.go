@@ -237,17 +237,12 @@ func (s *Storage) GetUserHash(username string) (string, error) {
 
 // UpdatePassword updates a user's password hash.
 func (s *Storage) UpdatePassword(username, passwordHash string) error {
-	return s.UpdateUserPassword(username, passwordHash)
-}
-
-// UpdateUserPassword updates a user's password hash.
-func (s *Storage) UpdateUserPassword(username, passwordHash string) error {
 	log := s.logger()
 	log.Debug("updating user password", "username", username)
 
 	res, err := s.db.Exec("UPDATE users SET password_hash = ? WHERE username = ?", passwordHash, username)
 	if err != nil {
-		log.Error("failed to update user password", "username", username, "error", err)
+		log.Error("failed to update password", "username", username, "error", err)
 		return err
 	}
 	rows, err := res.RowsAffected()
