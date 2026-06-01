@@ -220,7 +220,7 @@ func changePassword(cfg *config.Config, username, password string) {
 		fmt.Printf("Failed to hash password: %v\n", err)
 		os.Exit(1)
 	}
-	if err := storage.UpdateUserPassword(username, hash); err != nil {
+	if err := storage.UpdatePassword(username, hash); err != nil {
 		logger.LogCLIFailure(nil, operation, username, "failed to update user password: "+err.Error())
 		fmt.Printf("Failed to update password: %v\n", err)
 		os.Exit(1)

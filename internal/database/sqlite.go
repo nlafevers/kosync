@@ -217,6 +217,11 @@ func (s *Storage) GetUserHash(username string) (string, error) {
 	return hash, nil
 }
 
+// UpdatePassword updates a user's password hash.
+func (s *Storage) UpdatePassword(username, passwordHash string) error {
+	return s.UpdateUserPassword(username, passwordHash)
+}
+
 // UpdateUserPassword updates a user's password hash.
 func (s *Storage) UpdateUserPassword(username, passwordHash string) error {
 	log := s.logger()
