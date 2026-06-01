@@ -80,3 +80,113 @@ func TestLoadConfigLegacyDBPathEnv(t *testing.T) {
 		t.Errorf("expected /tmp/legacy.db, got %s", cfg.DatabasePath)
 	}
 }
+
+func TestValidateValid(t *testing.T) {
+	cfg := &Config{
+		Port:         8081,
+		DatabasePath: "/tmp/test.db",
+		LogLevel:     "info",
+		StorageCapMB: 0,
+	}
+	if err := cfg.Validate(); err != nil {
+		t.Errorf("expected no error, got %v", err)
+	}
+}
+
+func TestValidatePortZeroAllowed(t *testing.T) {
+	cfg := &Config{
+		Port:         0,
+		DatabasePath: "/tmp/test.db",
+		LogLevel:     "debug",
+		StorageCapMB: 0,
+	}
+	if err := cfg.Validate(); err != nil {
+		t.Errorf("expected no error for port 0, got %v", err)
+	}
+}
+
+func TestValidatePortOutOfRange(t *testing.T) {
+	cfg := &Config{
+		Port:         99999,
+		DatabasePath: "/tmp/test.db",
+		LogLevel:     "info",
+		StorageCapMB: 0,
+	}
+	if err := cfg.Validate(); err == nil {
+		t.Error("expected error for port 99999, got nil")
+	}
+}
+
+func TestValidateNegativePort(t *testing.T) {
+	cfg := &Config{
+		Port:         -1,
+		DatabasePath: "/tmp/test.db",
+		LogLevel:     "info",
+		StorageCapMB: 0,
+	}
+	if err := cfg.Validate(); err == nil {
+		t.Error("expected error for negative port, got nil")
+	}
+}
+
+func TestValidateEmptyDatabasePath(t *testing.T) {
+	cfg := &Config{
+		Port:         8081,
+		DatabasePath: "",
+		LogLevel:     "info",
+		StorageCapMB: 0,
+	}
+	if err := cfg.Validate(); err == nil {
+		t.Error("expected error for empty database_path, got nil")
+	}
+}
+
+func TestValidateInvalidLogLevel(t *testing.T) {
+	cfg := &Config{
+		Port:         8081,
+		DatabasePath: "/tmp/test.db",
+		LogLevel:     "verbose",
+		StorageCapMB: 0,
+	}
+	if err := cfg.Validate(); err == nil {
+		t.Error("expected error for invalid log_level, got nil")
+	}
+}
+
+func TestValidateAllLogLevels(t *testing.T) {
+	for _, level := range []string{"debug", "info", "warn", "error"} {
+		cfg := &Config{
+			Port:         8081,
+			DatabasePath: "/tmp/test.db",
+			LogLevel:     level,
+			StorageCapMB: 0,
+		}
+		if err := cfg.Validate(); err != nil {
+			t.Errorf("expected no error for log_level %q, got %v", level, err)
+		}
+	}
+}
+
+func TestValidateNegativeStorageCap(t *testing.T) {
+	cfg := &Config{
+		Port:         8081,
+		DatabasePath: "/tmp/test.db",
+		LogLevel:     "info",
+		StorageCapMB: -1,
+	}
+	if err := cfg.Validate(); err == nil {
+		t.Error("expected error for negative storage_cap_mb, got nil")
+	}
+}
+
+func TestValidateStorageCapZeroAllowed(t *testing.T) {
+	cfg := &Config{
+		Port:         8081,
+		DatabasePath: "/tmp/test.db",
+		LogLevel:     "info",
+		StorageCapMB: 0,
+	}
+	if err := cfg.Validate(); err != nil {
+		t.Errorf("expected no error for storage_cap_mb=0, got %v", err)
+	}
+}

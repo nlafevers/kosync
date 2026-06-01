@@ -42,6 +42,11 @@ func main() {
 }
 
 func runServer(cfg *config.Config, log *slog.Logger) {
+	if err := cfg.Validate(); err != nil {
+		log.Error("Invalid configuration", "error", err)
+		os.Exit(1)
+	}
+
 	log.Info("Starting KOSYNC",
 		"app_name", appName,
 		"port", cfg.Port,

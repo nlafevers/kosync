@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,6 +17,28 @@ type Config struct {
 	LogPath             string `mapstructure:"log_path"`
 	DisableRegistration bool   `mapstructure:"disable_registration"`
 	StorageCapMB        int    `mapstructure:"storage_cap_mb"`
+}
+
+// Validate checks that the configuration values are within acceptable bounds.
+// Port must be 0 (for tests) or 1-65535. DatabasePath must not be empty.
+// LogLevel must be one of debug, info, warn, or error. StorageCapMB must be non-negative.
+func (c *Config) Validate() error {
+	if c.Port < 0 || c.Port > 65535 {
+		return fmt.Errorf("invalid port %d: must be 0–65535", c.Port)
+	}
+	if c.DatabasePath == "" {
+		return fmt.Errorf("database_path must not be empty")
+	}
+	switch c.LogLevel {
+	case "debug", "info", "warn", "error":
+		// valid
+	default:
+		return fmt.Errorf("invalid log_level %q: must be debug, info, warn, or error", c.LogLevel)
+	}
+	if c.StorageCapMB < 0 {
+		return fmt.Errorf("storage_cap_mb must be non-negative, got %d", c.StorageCapMB)
+	}
+	return nil
 }
 
 func Load() (*Config, error) {
