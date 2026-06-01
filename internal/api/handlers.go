@@ -31,6 +31,11 @@ func HandleUserCreate(storage *database.Storage, cfg *config.Config) http.Handle
 			return
 		}
 
+		// Apply a random delay before any processing so that both new-user and
+		// duplicate-user paths experience the same delay distribution, making
+		// it harder for an attacker to infer whether an account exists.
+		randomDelay()
+
 		var req UserCreateRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			log.Error("failed to decode registration request", "error", err, "source", "API")
@@ -43,12 +48,12 @@ func HandleUserCreate(storage *database.Storage, cfg *config.Config) http.Handle
 			return
 		}
 
-		// Check if user already exists
+		// Check if user already exists. For duplicates, return a fake success
+		// response (201 Created) without touching the stored password, so the
+		// response is indistinguishable from a real registration.
 		existingHash, err := storage.GetUserHash(req.Username)
 		if err == nil && existingHash != "" {
 			log.Info("registration attempt for existing user", "username", req.Username, "source", "API")
-			// Random delay to prevent timing attacks, then pretend it succeeded
-			randomDelay()
 			w.WriteHeader(http.StatusCreated)
 			json.NewEncoder(w).Encode(UserCreateResponse{
 				Username: req.Username,

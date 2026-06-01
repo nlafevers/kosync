@@ -86,6 +86,68 @@ func TestHandleUserCreate(t *testing.T) {
 	})
 }
 
+// TestHandleUserCreateDuplicateTimingAndPassword verifies that registering an
+// already-existing username returns 201 Created with a fake success body that
+// is identical to a real registration response, and that the stored password
+// hash is NOT changed by the duplicate attempt.
+func TestHandleUserCreateDuplicateTimingAndPassword(t *testing.T) {
+	storage, _ := setupTestDB(t)
+	cfg := &config.Config{DisableRegistration: false}
+	handler := HandleUserCreate(storage, cfg)
+
+	// Step 1: register the user with passwordA.
+	passwordA := "passwordA"
+	bodyA, _ := json.Marshal(UserCreateRequest{Username: "dupuser", Password: passwordA})
+	reqA := httptest.NewRequest("POST", "/users/create", bytes.NewBuffer(bodyA))
+	wA := httptest.NewRecorder()
+	handler.ServeHTTP(wA, reqA)
+	if wA.Code != http.StatusCreated {
+		t.Fatalf("initial registration: expected 201 Created, got %d", wA.Code)
+	}
+
+	// Capture the response body of the first (real) registration.
+	var realResp UserCreateResponse
+	if err := json.NewDecoder(wA.Body).Decode(&realResp); err != nil {
+		t.Fatalf("failed to decode first registration response: %v", err)
+	}
+
+	// Step 2: attempt to register the same username with passwordB.
+	passwordB := "passwordB"
+	bodyB, _ := json.Marshal(UserCreateRequest{Username: "dupuser", Password: passwordB})
+	reqB := httptest.NewRequest("POST", "/users/create", bytes.NewBuffer(bodyB))
+	wB := httptest.NewRecorder()
+	handler.ServeHTTP(wB, reqB)
+
+	// Must return 201 Created — indistinguishable from a real registration.
+	if wB.Code != http.StatusCreated {
+		t.Errorf("duplicate registration: expected 201 Created, got %d", wB.Code)
+	}
+
+	// Response body must look the same as a real registration.
+	var dupResp UserCreateResponse
+	if err := json.NewDecoder(wB.Body).Decode(&dupResp); err != nil {
+		t.Fatalf("failed to decode duplicate registration response: %v", err)
+	}
+	if dupResp.Username != realResp.Username {
+		t.Errorf("duplicate response username: expected %q, got %q", realResp.Username, dupResp.Username)
+	}
+	if dupResp.Message != realResp.Message {
+		t.Errorf("duplicate response message: expected %q, got %q", realResp.Message, dupResp.Message)
+	}
+
+	// Step 3: verify that the stored password hash still matches passwordA, not passwordB.
+	storedHash, err := storage.GetUserHash("dupuser")
+	if err != nil {
+		t.Fatalf("failed to retrieve stored hash: %v", err)
+	}
+	if !CheckPassword(storedHash, passwordA) {
+		t.Error("stored hash should still match passwordA after duplicate registration")
+	}
+	if CheckPassword(storedHash, passwordB) {
+		t.Error("stored hash must NOT match passwordB — the duplicate registration must not update the password")
+	}
+}
+
 func TestHandleAuth(t *testing.T) {
 	req := httptest.NewRequest("GET", "/users/auth", nil)
 	w := httptest.NewRecorder()
