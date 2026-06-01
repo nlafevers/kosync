@@ -64,11 +64,6 @@ func NewStorage(db *sql.DB, log *slog.Logger) *Storage {
 	return &Storage{db: db, log: log}
 }
 
-// NewSQLite creates a new SQLite database connection.
-func NewSQLite(path string, allowCreate bool) (*sql.DB, error) {
-	return OpenSQLite(path, allowCreate)
-}
-
 func Migrate(db *sql.DB) error {
 	usersTable := `
 	CREATE TABLE IF NOT EXISTS users (
