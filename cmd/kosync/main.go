@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"kosync/internal/api"
 	"kosync/internal/config"
@@ -29,14 +30,18 @@ func main() {
 		fmt.Printf("Error loading config: %v\n", err)
 		os.Exit(1)
 	}
+
 	log := logger.New(cfg.LogLevel, cfg.JSONLog, cfg.LogPath)
 
-	// Handle CLI commands
 	if len(os.Args) > 1 {
 		runCLI(cfg)
 		return
 	}
 
+	runServer(cfg, log)
+}
+
+func runServer(cfg *config.Config, log *slog.Logger) {
 	log.Info("Starting KOSYNC",
 		"app_name", appName,
 		"port", cfg.Port,
@@ -87,30 +92,36 @@ func main() {
 	handler = api.ContentTypeMiddleware(handler)
 
 	mux.Handle("/", handler)
-	log.Info("Server listening", "port", cfg.Port)
 
-	// Graceful shutdown
-	server := &http.Server{Addr: fmt.Sprintf(":%d", cfg.Port), Handler: api.LoggingMiddleware(mux)}
+	// Start server
+	srv := &http.Server{
+		Addr:    fmt.Sprintf(":%d", cfg.Port),
+		Handler: api.LoggingMiddleware(mux),
+	}
 	go func() {
-		sigChan := make(chan os.Signal, 1)
-		signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-
-		sig := <-sigChan
-		log.Info("Shutdown signal received", "signal", sig.String())
-		log.Info("Shutting down server...")
-
-		if err := server.Shutdown(context.Background()); err != nil {
-			log.Error("Server shutdown failed", "error", err)
-		} else {
-			log.Info("Server exited cleanly")
+		log.Info("Server listening", "port", cfg.Port)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Error("ListenAndServe failed", "error", err)
+			os.Exit(1)
 		}
 	}()
 
-	if err := server.ListenAndServe(); err != http.ErrServerClosed {
-		log.Error("Server failed", "error", err)
-		os.Exit(1)
+	// Graceful shutdown
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+
+	sig := <-stop
+	log.Info("Shutdown signal received", "signal", sig.String())
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	log.Info("Shutting down server...")
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Error("Server shutdown failed", "error", err)
+	} else {
+		log.Info("Server exited cleanly")
 	}
-	log.Info("Server exited cleanly")
 }
 
 func runCLI(cfg *config.Config) {
