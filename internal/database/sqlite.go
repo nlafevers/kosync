@@ -295,29 +295,17 @@ func (s *Storage) EnforceStorageCap(path string, capMB int) (bool, error) {
 		return false, nil
 	}
 
-	info, err := os.Stat(path)
-	if err != nil {
-		log.Error("failed to inspect database file size", "database_path", path, "error", err)
-		return false, err
-	}
-
-	currentSizeMB := float64(info.Size()) / (1024 * 1024)
-	log.Debug("checking storage cap", "database_path", path, "current_size_mb", currentSizeMB, "cap_mb", capMB)
-
-	if info.Size() < int64(capMB)*1024*1024 {
-		return false, nil
-	}
-
-	log.Warn("storage cap exceeded", "database_path", path, "current_size_mb", currentSizeMB, "cap_mb", capMB)
+	log.Debug("checking storage cap", "database_path", path, "cap_mb", capMB)
 
 	pruned, err := enforceStorageCap(path, capMB, s.pruneStorageCapRecords, s.vacuum)
 	if err != nil {
-		log.Error("failed to enforce storage cap", "database_path", path, "current_size_mb", currentSizeMB, "cap_mb", capMB, "error", err)
+		log.Error("failed to enforce storage cap", "database_path", path, "cap_mb", capMB, "error", err)
 		return false, err
 	}
 
 	if pruned {
-		log.Info("storage cap enforced", "database_path", path, "current_size_mb", currentSizeMB, "cap_mb", capMB)
+		log.Warn("storage cap exceeded", "database_path", path, "cap_mb", capMB)
+		log.Info("storage cap enforced", "database_path", path, "cap_mb", capMB)
 	}
 
 	return pruned, nil
