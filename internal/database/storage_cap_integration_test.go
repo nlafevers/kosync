@@ -40,8 +40,7 @@ func TestEnforceStorageCapIntegration(t *testing.T) {
 			Device:     "ereader",
 			Timestamp:  time.Now().Unix(),
 		}
-		err := storage.UpsertProgress("testuser", p)
-		if err != nil {
+		if _, err := storage.UpsertProgress("testuser", p); err != nil {
 			t.Fatalf("failed to upsert progress: %v", err)
 		}
 	}

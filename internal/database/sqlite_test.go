@@ -54,9 +54,12 @@ func TestStorage(t *testing.T) {
 			Timestamp:  time.Now().Unix(),
 		}
 
-		err := storage.UpsertProgress("testuser", p)
+		changed, err := storage.UpsertProgress("testuser", p)
 		if err != nil {
 			t.Errorf("failed to upsert progress: %v", err)
+		}
+		if !changed {
+			t.Error("expected changed=true for initial insert")
 		}
 
 		saved, err := storage.GetProgress("testuser", "doc123")
@@ -64,24 +67,52 @@ func TestStorage(t *testing.T) {
 			t.Errorf("failed to get correct progress: %v, got %+v", err, saved)
 		}
 
-		// Update with newer timestamp
+		// Update with newer timestamp — should be applied (changed=true).
 		p2 := p
 		p2.Percentage = 0.80
 		p2.Timestamp += 10
-		storage.UpsertProgress("testuser", p2)
+		changed2, err2 := storage.UpsertProgress("testuser", p2)
+		if err2 != nil {
+			t.Errorf("failed to upsert newer progress: %v", err2)
+		}
+		if !changed2 {
+			t.Error("expected changed=true for newer timestamp update")
+		}
 		saved, _ = storage.GetProgress("testuser", "doc123")
 		if saved.Percentage != 0.80 {
 			t.Errorf("expected 0.80, got %f", saved.Percentage)
 		}
 
-		// Try update with older timestamp (should be ignored)
+		// Try update with older timestamp (should be ignored, changed=false).
 		p3 := p
 		p3.Percentage = 0.60
 		p3.Timestamp -= 20
-		storage.UpsertProgress("testuser", p3)
+		changed3, err3 := storage.UpsertProgress("testuser", p3)
+		if err3 != nil {
+			t.Errorf("failed to upsert stale progress: %v", err3)
+		}
+		if changed3 {
+			t.Error("expected changed=false for older timestamp update")
+		}
 		saved, _ = storage.GetProgress("testuser", "doc123")
 		if saved.Percentage != 0.80 {
 			t.Errorf("expected 0.80 (ignored older update), got %f", saved.Percentage)
+		}
+
+		// Try update with equal timestamp (should be ignored, changed=false).
+		p4 := p2
+		p4.Percentage = 0.90
+		// p2.Timestamp is unchanged (equal to stored)
+		changed4, err4 := storage.UpsertProgress("testuser", p4)
+		if err4 != nil {
+			t.Errorf("failed to upsert equal-timestamp progress: %v", err4)
+		}
+		if changed4 {
+			t.Error("expected changed=false for equal timestamp update")
+		}
+		saved, _ = storage.GetProgress("testuser", "doc123")
+		if saved.Percentage != 0.80 {
+			t.Errorf("expected 0.80 (ignored equal timestamp update), got %f", saved.Percentage)
 		}
 	})
 
@@ -227,10 +258,12 @@ func TestStorageCap(t *testing.T) {
 
 	storage.CreateUser("user1", "hash")
 	for i := 0; i < 100; i++ {
-		storage.UpsertProgress("user1", models.Progress{
+		if _, err := storage.UpsertProgress("user1", models.Progress{
 			Document:  "doc" + string(rune(i)),
 			Timestamp: int64(i),
-		})
+		}); err != nil {
+			t.Fatalf("failed to upsert progress[%d]: %v", i, err)
+		}
 	}
 
 	// Force cap enforcement with small limit
@@ -257,7 +290,7 @@ func TestStorageCapLogsMaintenance(t *testing.T) {
 	if err := storage.CreateUser("user1", "hash"); err != nil {
 		t.Fatalf("failed to create user: %v", err)
 	}
-	if err := storage.UpsertProgress("user1", models.Progress{Document: "doc1", Timestamp: time.Now().Unix()}); err != nil {
+	if _, err := storage.UpsertProgress("user1", models.Progress{Document: "doc1", Timestamp: time.Now().Unix()}); err != nil {
 		t.Fatalf("failed to upsert progress: %v", err)
 	}
 

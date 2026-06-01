@@ -166,21 +166,27 @@ func HandleUpdateProgress(storage *database.Storage, cfg *config.Config) http.Ha
 			p.Timestamp = time.Now().Unix()
 		}
 
-		if err := storage.UpsertProgress(username, p); err != nil {
+		changed, err := storage.UpsertProgress(username, p)
+		if err != nil {
 			log.Error("failed to upsert progress", "username", username, "document", p.Document, "error", err, "source", "API")
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 
-		// Enforce storage cap
-		if pruned, err := storage.EnforceStorageCap(cfg.DatabasePath, cfg.StorageCapMB); err != nil {
-			log.Error("failed to enforce storage cap", "error", err, "source", "API")
-		} else if pruned {
-			log.Warn("storage cap enforced: oldest records pruned", "database_path", cfg.DatabasePath, "cap_mb", cfg.StorageCapMB, "source", "API")
+		if !changed {
+			log.Info("progress update ignored (stale timestamp)", "username", username, "document", p.Document, "timestamp", p.Timestamp, "source", "API")
+		} else {
+			// Enforce storage cap only when the row actually changed.
+			if pruned, err := storage.EnforceStorageCap(cfg.DatabasePath, cfg.StorageCapMB); err != nil {
+				log.Error("failed to enforce storage cap", "error", err, "source", "API")
+			} else if pruned {
+				log.Warn("storage cap enforced: oldest records pruned", "database_path", cfg.DatabasePath, "cap_mb", cfg.StorageCapMB, "source", "API")
+			}
+
+			log.Info("progress updated", "username", username, "document", p.Document, "percentage", p.Percentage, "timestamp", p.Timestamp, "source", "API")
+			log.Debug("progress update details", "username", username, "document", p.Document, "percentage", p.Percentage, "timestamp", p.Timestamp, "source", "API")
 		}
 
-		log.Info("progress updated", "username", username, "document", p.Document, "percentage", p.Percentage, "timestamp", p.Timestamp, "source", "API")
-		log.Debug("progress update details", "username", username, "document", p.Document, "percentage", p.Percentage, "timestamp", p.Timestamp, "source", "API")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]string{"message": "Progress updated"})
 	}

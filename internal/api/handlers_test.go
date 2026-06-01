@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -208,7 +209,9 @@ func TestHandleGetProgress(t *testing.T) {
 	// Seed data
 	hash, _ := HashPassword("testpass")
 	storage.CreateUser("testuser", hash)
-	storage.UpsertProgress("testuser", models.Progress{Document: "doc1", Percentage: 0.5})
+	if _, err := storage.UpsertProgress("testuser", models.Progress{Document: "doc1", Percentage: 0.5, Timestamp: 1000}); err != nil {
+		t.Fatalf("failed to seed progress: %v", err)
+	}
 
 	t.Run("Success", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/syncs/progress/doc1", nil)
@@ -299,7 +302,9 @@ func TestHandleGetProgressLogsSuccess(t *testing.T) {
 	storage, _ := setupTestDB(t)
 	hash, _ := HashPassword("testpass")
 	storage.CreateUser("testuser", hash)
-	storage.UpsertProgress("testuser", models.Progress{Document: "doc1", Percentage: 0.5})
+	if _, err := storage.UpsertProgress("testuser", models.Progress{Document: "doc1", Percentage: 0.5, Timestamp: 1000}); err != nil {
+		t.Fatalf("failed to seed progress: %v", err)
+	}
 
 	handler := LoggingMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), ContextKeyUser, "testuser")
@@ -345,6 +350,12 @@ func TestHandleGetProgressLogsSuccess(t *testing.T) {
 func TestHandleUpdateProgress(t *testing.T) {
 	storage, dbPath := setupTestDB(t)
 	cfg := &config.Config{DatabasePath: dbPath, StorageCapMB: 0}
+
+	// Create user required for FK constraint.
+	hash, _ := HashPassword("testpass")
+	if err := storage.CreateUser("testuser", hash); err != nil {
+		t.Fatalf("failed to create testuser: %v", err)
+	}
 
 	t.Run("Success", func(t *testing.T) {
 		p := models.Progress{Document: "doc2", Percentage: 0.8}
@@ -487,6 +498,12 @@ func TestProgressTimestampConflict(t *testing.T) {
 	username := "testuser"
 	doc := "doc123"
 
+	// Create the user required by the FK constraint.
+	hash, _ := HashPassword("testpass")
+	if err := storage.CreateUser(username, hash); err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
+
 	// Helper to send PUT request
 	sendPut := func(percentage float64, timestamp int64) *httptest.ResponseRecorder {
 		p := models.Progress{
@@ -537,5 +554,63 @@ func TestProgressTimestampConflict(t *testing.T) {
 	p = getProgress()
 	if p.Percentage != 0.6 {
 		t.Errorf("expected 0.6, got %f (equal timestamp update applied)", p.Percentage)
+	}
+
+	// 5. All stale/equal responses must still be 200 OK.
+	w := sendPut(0.4, 900)
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200 OK for stale update, got %d", w.Code)
+	}
+}
+
+// TestHandleUpdateProgressStaleLogging verifies that a stale progress update
+// returns 200 OK and logs a stale-ignored message.
+func TestHandleUpdateProgressStaleLogging(t *testing.T) {
+	var buf bytes.Buffer
+	logger := slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	oldDefault := slog.Default()
+	slog.SetDefault(logger)
+	defer slog.SetDefault(oldDefault)
+
+	storage, _ := setupTestDB(t)
+	cfg := &config.Config{DatabasePath: "test.db", StorageCapMB: 0}
+	username := "staleuser"
+
+	hash, _ := HashPassword("pass")
+	if err := storage.CreateUser(username, hash); err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
+
+	sendPut := func(percentage float64, ts int64) *httptest.ResponseRecorder {
+		p := models.Progress{
+			Document:   "stale-doc",
+			Percentage: percentage,
+			Timestamp:  ts,
+		}
+		body, _ := json.Marshal(p)
+		req := httptest.NewRequest("PUT", "/syncs/progress", bytes.NewBuffer(body))
+		req = req.WithContext(context.WithValue(req.Context(), ContextKeyUser, username))
+		w := httptest.NewRecorder()
+		HandleUpdateProgress(storage, cfg).ServeHTTP(w, req)
+		return w
+	}
+
+	// Initial insert at timestamp 1000.
+	w := sendPut(0.5, 1000)
+	if w.Code != http.StatusOK {
+		t.Fatalf("initial insert: expected 200, got %d", w.Code)
+	}
+
+	// Stale update at timestamp 500 — must return 200 OK.
+	buf.Reset()
+	w = sendPut(0.3, 500)
+	if w.Code != http.StatusOK {
+		t.Errorf("stale update: expected 200 OK, got %d", w.Code)
+	}
+
+	// Verify the stale-ignored log message is present.
+	output := buf.String()
+	if !strings.Contains(output, "stale") {
+		t.Errorf("expected stale-ignored log message, got: %s", output)
 	}
 }

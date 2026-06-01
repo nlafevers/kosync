@@ -131,8 +131,10 @@ func (s *Storage) GetProgress(username, document string) (*models.Progress, erro
 }
 
 // UpsertProgress inserts or updates the reading progress.
-// It only updates if the incoming timestamp is newer than the existing one.
-func (s *Storage) UpsertProgress(username string, p models.Progress) error {
+// It only updates if the incoming timestamp is strictly newer than the existing one.
+// Returns (true, nil) if the row was inserted or updated, (false, nil) if the update
+// was ignored because the incoming timestamp was stale (older than or equal to stored).
+func (s *Storage) UpsertProgress(username string, p models.Progress) (bool, error) {
 	log := s.logger()
 	log.Debug("upserting progress", "username", username, "document", p.Document, "percentage", p.Percentage, "timestamp", p.Timestamp)
 
@@ -147,14 +149,25 @@ func (s *Storage) UpsertProgress(username string, p models.Progress) error {
 		timestamp = excluded.timestamp
 	WHERE excluded.timestamp > progress.timestamp;`
 
-	_, err := s.db.Exec(query, username, p.Document, p.Percentage, p.Progress, p.DeviceID, p.Device, p.Timestamp)
+	res, err := s.db.Exec(query, username, p.Document, p.Percentage, p.Progress, p.DeviceID, p.Device, p.Timestamp)
 	if err != nil {
 		log.Error("failed to upsert progress", "username", username, "document", p.Document, "error", err)
-		return err
+		return false, err
 	}
 
-	log.Debug("progress upserted", "username", username, "document", p.Document, "percentage", p.Percentage)
-	return nil
+	rows, err := res.RowsAffected()
+	if err != nil {
+		log.Error("failed to check rows affected", "username", username, "document", p.Document, "error", err)
+		return false, err
+	}
+
+	changed := rows > 0
+	if changed {
+		log.Debug("progress upserted", "username", username, "document", p.Document, "percentage", p.Percentage)
+	} else {
+		log.Debug("progress update ignored (stale timestamp)", "username", username, "document", p.Document, "timestamp", p.Timestamp)
+	}
+	return changed, nil
 }
 
 // CreateUser creates a new user with a password (which should be the MD5 hash from the client).
