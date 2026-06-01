@@ -1,11 +1,5 @@
 package models
 
-// User represents a user in the system.
-type User struct {
-	Username     string `json:"username"`
-	PasswordHash string `json:"password_hash"`
-}
-
 // Progress represents the reading progress of a document.
 type Progress struct {
 	Document   string  `json:"document"`
