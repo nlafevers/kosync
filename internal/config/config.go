@@ -52,7 +52,7 @@ func Load() (*Config, error) {
 	viper.SetDefault("log_level", "info")
 	viper.SetDefault("json_log", false)
 	viper.SetDefault("log_path", "")
-	viper.SetDefault("disable_registration", false)
+	viper.SetDefault("disable_registration", true)
 	viper.SetDefault("storage_cap_mb", 0)
 
 	viper.SetEnvPrefix("KOSYNC")

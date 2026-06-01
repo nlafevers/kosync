@@ -119,7 +119,7 @@ services:
       - KOSYNC_DATABASE_PATH=/app/data/kosync.db
       - KOSYNC_LOG_LEVEL=info
       - KOSYNC_JSON_LOG=true
-      - KOSYNC_DISABLE_REGISTRATION=false
+      - KOSYNC_DISABLE_REGISTRATION=true
       - KOSYNC_STORAGE_CAP_MB=0
 volumes:
 kosync_data:
@@ -183,7 +183,7 @@ All settings can be provided as environment variables (prefixed with `KOSYNC_`).
 | `KOSYNC_LOG_LEVEL` | Logging verbosity (`debug`, `info`, `warn`, `error`). | `info` |
 | `KOSYNC_JSON_LOG` | Enable structured JSON logging (best for Docker and log aggregators). | `false` |
 | `KOSYNC_LOG_PATH` | File path for unified logging. | - |
-| `KOSYNC_DISABLE_REGISTRATION` | Disable user registration endpoints. | `false` |
+| `KOSYNC_DISABLE_REGISTRATION` | Disable user registration endpoints. Set to `false` to allow new users to self-register. | `true` |
 | `KOSYNC_STORAGE_CAP_MB` | Maximum database size in MB (0 to disable). | `0` |
 
 ### 3. Run as non-root user

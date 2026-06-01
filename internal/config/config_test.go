@@ -67,6 +67,35 @@ func TestLoadConfigDefaults(t *testing.T) {
 	}
 }
 
+func TestLoadConfigDisableRegistrationDefaultTrue(t *testing.T) {
+	// Ensure env is clean so the default is used
+	os.Unsetenv("KOSYNC_DISABLE_REGISTRATION")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+
+	if !cfg.DisableRegistration {
+		t.Error("expected DisableRegistration to default to true")
+	}
+}
+
+func TestLoadConfigDisableRegistrationOptIn(t *testing.T) {
+	// Verify that setting the env var to false enables registration
+	os.Setenv("KOSYNC_DISABLE_REGISTRATION", "false")
+	defer os.Unsetenv("KOSYNC_DISABLE_REGISTRATION")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+
+	if cfg.DisableRegistration {
+		t.Error("expected DisableRegistration to be false when env var is false")
+	}
+}
+
 func TestLoadConfigLegacyDBPathEnv(t *testing.T) {
 	os.Setenv("KOSYNC_DB_PATH", "/tmp/legacy.db")
 	defer os.Unsetenv("KOSYNC_DB_PATH")

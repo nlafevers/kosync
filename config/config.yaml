@@ -3,5 +3,5 @@ database_path: ./data/kosync.db
 log_level: info
 json_log: false
 log_path: ""
-disable_registration: false
+disable_registration: true
 storage_cap_mb: 0
