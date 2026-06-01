@@ -287,6 +287,10 @@ func (s *Storage) DeleteUser(username string) error {
 // If it does, it deletes the oldest 20% of progress records and runs VACUUM.
 func (s *Storage) EnforceStorageCap(path string, capMB int) (bool, error) {
 	log := s.logger()
+	if capMB <= 0 {
+		log.Debug("storage cap disabled, skipping enforcement", "database_path", path)
+		return false, nil
+	}
 
 	info, err := os.Stat(path)
 	if err != nil {
