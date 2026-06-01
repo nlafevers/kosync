@@ -89,7 +89,6 @@ func HandleAuth(w http.ResponseWriter, r *http.Request) {
 
 	log.Info("auth successful", "username", username, "source", "API")
 	log.Debug("auth response generated", "username", username, "source", "API")
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"authorized": "OK"})
 }

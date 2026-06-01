@@ -98,7 +98,7 @@ func runServer(cfg *config.Config, log *slog.Logger) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	})
-	mux.Handle("POST /users/create", wrapRateLimit(api.HandleUserCreate(storage, cfg)))
+	mux.Handle("POST /users/create", wrapRateLimit(api.ContentTypeMiddleware(api.HandleUserCreate(storage, cfg))))
 
 	// Protected routes
 	protected := http.NewServeMux()

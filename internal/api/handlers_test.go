@@ -103,6 +103,44 @@ func TestHandleAuth(t *testing.T) {
 	}
 }
 
+func TestHandleAuthContentType(t *testing.T) {
+	req := httptest.NewRequest("GET", "/users/auth", nil)
+	w := httptest.NewRecorder()
+
+	// Wrap with ContentTypeMiddleware as it is in real routing.
+	handler := ContentTypeMiddleware(http.HandlerFunc(HandleAuth))
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200 OK, got %d", w.Code)
+	}
+	ct := w.Header().Get("Content-Type")
+	if ct != KOReaderMimeType {
+		t.Errorf("expected Content-Type %q, got %q", KOReaderMimeType, ct)
+	}
+}
+
+func TestHandleUserCreateContentType(t *testing.T) {
+	storage, _ := setupTestDB(t)
+	cfg := &config.Config{DisableRegistration: false}
+
+	reqBody, _ := json.Marshal(UserCreateRequest{Username: "ctuser", Password: "ctpass"})
+	req := httptest.NewRequest("POST", "/users/create", bytes.NewBuffer(reqBody))
+	w := httptest.NewRecorder()
+
+	// Wrap with ContentTypeMiddleware as it is in real routing.
+	handler := ContentTypeMiddleware(HandleUserCreate(storage, cfg))
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Errorf("expected 201 Created, got %d", w.Code)
+	}
+	ct := w.Header().Get("Content-Type")
+	if ct != KOReaderMimeType {
+		t.Errorf("expected Content-Type %q, got %q", KOReaderMimeType, ct)
+	}
+}
+
 func TestHandleGetProgress(t *testing.T) {
 	storage, _ := setupTestDB(t)
 	// Seed data
