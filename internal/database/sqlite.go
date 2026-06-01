@@ -177,7 +177,18 @@ func (s *Storage) UpsertProgress(username string, p models.Progress) (bool, erro
 
 // CreateUser creates a new user with a password (which should be the MD5 hash from the client).
 func (s *Storage) CreateUser(username, password string) error {
-	return s.SaveUser(username, password)
+	log := s.logger()
+	log.Debug("saving user", "username", username)
+
+	_, err := s.db.Exec(`
+		INSERT INTO users (username, password_hash) VALUES (?, ?)
+		ON CONFLICT(username) DO UPDATE SET password_hash=excluded.password_hash`,
+		username, password)
+	if err != nil {
+		log.Error("failed to save user", "username", username, "error", err)
+		return err
+	}
+	return err
 }
 
 // CreateUserIfNotExists creates a new user only if they don't already exist.
@@ -203,22 +214,6 @@ func (s *Storage) CreateUserIfNotExists(username, password string) error {
 	}
 	log.Debug("user created", "username", username)
 	return nil
-}
-
-// SaveUser creates or updates a user with a password hash.
-func (s *Storage) SaveUser(username, password string) error {
-	log := s.logger()
-	log.Debug("saving user", "username", username)
-
-	_, err := s.db.Exec(`
-		INSERT INTO users (username, password_hash) VALUES (?, ?)
-		ON CONFLICT(username) DO UPDATE SET password_hash=excluded.password_hash`,
-		username, password)
-	if err != nil {
-		log.Error("failed to save user", "username", username, "error", err)
-		return err
-	}
-	return err
 }
 
 // GetUserHash retrieves the password hash for a user.
