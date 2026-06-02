@@ -46,3 +46,46 @@ func New(level string, json bool, logPath string) *slog.Logger {
 	slog.SetDefault(logger)
 	return logger
 }
+
+// NewCLI initializes a logger for CLI mode. Structured entries go to the
+// log file only; if no log path is configured they are discarded. This
+// keeps CLI stdout clean: only fmt.Fprintf print statements reach the
+// terminal.
+func NewCLI(level string, json bool, logPath string) *slog.Logger {
+	var slogLevel slog.Level
+	switch strings.ToLower(level) {
+	case "debug":
+		slogLevel = slog.LevelDebug
+	case "info":
+		slogLevel = slog.LevelInfo
+	case "warn":
+		slogLevel = slog.LevelWarn
+	case "error":
+		slogLevel = slog.LevelError
+	default:
+		slogLevel = slog.LevelInfo
+	}
+
+	var output io.Writer = io.Discard
+
+	if logPath != "" {
+		file, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to open log file: %v\n", err)
+			// output stays io.Discard
+		} else {
+			output = file
+		}
+	}
+
+	var handler slog.Handler
+	if json {
+		handler = slog.NewJSONHandler(output, &slog.HandlerOptions{Level: slogLevel})
+	} else {
+		handler = slog.NewTextHandler(output, &slog.HandlerOptions{Level: slogLevel})
+	}
+
+	l := slog.New(handler)
+	slog.SetDefault(l)
+	return l
+}
