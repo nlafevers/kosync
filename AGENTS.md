@@ -9,7 +9,7 @@ KOSYNC is maintained alongside KOPDS with a maximum-uniformity goal. Functions t
 ## Project Overview
 
 - **Core Technologies:**
-  - **Language:** Go (Golang) for a single-binary, low-memory footprint. Version: 1.22.
+  - **Language:** Go (Golang) for a single-binary, low-memory footprint. Version: 1.25.
   - **Database:** Pure Go SQLite (`modernc.org/sqlite`) for local indexing and multi-user support.
   - **Web Framework:** Lightweight routing with Go's standard HTTP router (`net/http.ServeMux`).
   - **Security:** Bcrypt (`golang.org/x/crypto/bcrypt`) for password hashing.
