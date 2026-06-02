@@ -261,6 +261,8 @@ KOSYNC uses structured `slog` logging to provide an audit trail of system events
 ### Log Destinations
 When `KOSYNC_LOG_PATH` is set, the **server** writes structured logs to both stderr and that file. **CLI** commands (`create-user`, `delete-user`, `change-password`) write structured logs to the file only — or discard them when no path is set — so the terminal shows only the one-line human-readable result.
 
+**Docker note:** `docker exec` runs in a separate process — its output goes directly to your terminal, not through Docker's logging driver. CLI user-management commands therefore never appear in `docker logs` regardless of log settings. If you need a persistent audit trail of CLI operations, set `KOSYNC_LOG_PATH` to a path on a mounted volume (e.g., `/app/data/kosync.log`) and read that file directly.
+
 ### Log Levels
 - **`debug`:** Shows granular details including database interactions, auth success events, and timestamp-based sync resolution (e.g., why an update was skipped).
 - **`info`:** Recommended for production. Shows server startup, CLI successes, and completed HTTP requests.
