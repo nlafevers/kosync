@@ -61,7 +61,8 @@ trap cleanup EXIT
 
 # Build server
 echo "Building KOSYNC..."
-GOCACHE=/tmp/kosync-gocache go build -o $BIN_NAME ../cmd/kosync
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+GOCACHE=/tmp/kosync-gocache go build -o $BIN_NAME "$SCRIPT_DIR/../cmd/kosync"
 
 # Create user via CLI
 echo "Creating test user..."
