@@ -32,13 +32,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	log := logger.New(cfg.LogLevel, cfg.JSONLog, cfg.LogPath)
-
 	if len(os.Args) > 1 {
+		logger.NewCLI(cfg.LogLevel, cfg.JSONLog, cfg.LogPath)
 		runCLI(cfg)
 		return
 	}
 
+	log := logger.New(cfg.LogLevel, cfg.JSONLog, cfg.LogPath)
 	runServer(cfg, log)
 }
 
