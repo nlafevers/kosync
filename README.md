@@ -9,18 +9,19 @@ KOSYNC is a server that facilitates synchronization of ebooks across your KORead
 
 ## 📖 Table of Contents
 
-1.  [Why KOSYNC?](#-why-KOSYNC)
+1.  [Why KOSYNC?](#-why-kosync)
 2.  [Key Features](#-key-features)
 3.  [Prerequisites](#-prerequisites)
 4.  [Quick Start (Docker)](#-quick-start-docker)
 5.  [Usage with KOReader](#-usage-with-koreader)
 6.  [Native Installation](#-native-installation)
-7.  [CLI User Management](#-cli-user-management)
-8.  [Security & Deployment](#-security--deployment)
+7.  [Configuration Reference](#-configuration-reference)
+8.  [CLI User Management](#-cli-user-management)
 9.  [Logging](#-logging)
 10. [Technical Overview](#-technical-overview)
-11. [Troubleshooting](#-troubleshooting)
-12. [License](#-license)
+11. [Security](#-security)
+12. [Troubleshooting](#-troubleshooting)
+13. [License](#-license)
 
 ---
 
@@ -42,6 +43,8 @@ While official and alternative synchronization solutions exist, KOSYNC focuses o
 - **Developer-Friendly Architecture:** Clean, modular design (Middleware -> Handlers -> Storage) that makes it easy to audit, troubleshoot, or extend.
 - **Production-Ready:** Includes structured `slog` logging, graceful shutdown handling, and support for both native binary and Dockerized deployments.
 
+---
+
 ## 📋 Prerequisites
 
 ### Software Requirements
@@ -55,14 +58,14 @@ docker compose version
 *If you don't have them, follow the [official Docker installation guide](https://docs.docker.com/get-docker/).*
 
 #### 2. If installing Natively
-You need the Go compiler (v1.26.x or later). To check your version, run:
+You need the Go compiler (v1.25.x or later). To check your version, run:
 ```bash
 go version
 ```
 *If you don't have it, download it from [go.dev](https://go.dev/dl/). No C compiler is required as KOSYNC uses a pure-Go SQLite driver.*
 
-#### 3. Reverse Proxy
-While KOSYNC itself uses HTTP Basic Authentication, for security reasons you should place it behind a reverse proxy.  Caddy is recommended to keep a pure-Go environment.
+#### 3. Reverse Proxy (recommended for production)
+KOSYNC uses HTTP Basic Authentication, which transmits credentials in plain text. For any internet-facing deployment you should place it behind an HTTPS reverse proxy (Caddy is a good pure-Go choice). Reverse-proxy setup instructions live in the KOSERVER project deployment guide.
 > [!NOTE]
 > A reverse proxy alone does not make your server completely secure.  You are responsible for properly configuring your server to meet your security needs.
 
@@ -80,9 +83,9 @@ The other hardware requirements are potato-tier.  See recommended below:
 | Storage Space | ~250 MB                      | ~1.5 GB                      | ~25 MB        | ~200 MB      |
 | Network       | 1+ Mbps                      | 1+ Mbps                      | < 1 Mbps      | 1+ Mbps      |
 
-*Assumes rclone is used to mount remote storage. A swap file is highly recommended to prevent Out-of-Memory (OOM) crashes during initial directory scans.
+_*Assumes rclone is used to mount remote storage. A swap file is highly recommended to prevent Out-of-Memory (OOM) crashes during initial directory scans._
 
-†1 GB will likely not be sufficient if you intend to build your own Docker image locally
+_†1 GB will likely not be sufficient if you intend to build your own Docker image locally_
 
 ---
 
@@ -101,28 +104,29 @@ Create a file named `deploy/docker-compose.yml` and paste the following content.
 
 ```yaml
 services:
-   kosync:
-      image: ghcr.io/nlafevers/kosync:latest # or build: .
-      container_name: kosync
-      restart: unless-stopped
-      ports:
-         - "8081:8081"
-      # Security hardening
-      read_only: true
-      tmpfs:
-         - /tmp
-      volumes:
-         # Persistent storage for the SQLite database
-         - kosync_data:/app/data
-      environment:
+  kosync:
+    image: ghcr.io/nlafevers/kosync:latest # or build: .
+    container_name: kosync
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    # Security hardening
+    read_only: true
+    tmpfs:
+      - /tmp
+    volumes:
+      # Persistent storage for the SQLite database
+      - kosync_data:/app/data
+    environment:
       - KOSYNC_PORT=8081
       - KOSYNC_DATABASE_PATH=/app/data/kosync.db
       - KOSYNC_LOG_LEVEL=info
       - KOSYNC_JSON_LOG=true
       - KOSYNC_DISABLE_REGISTRATION=true
       - KOSYNC_STORAGE_CAP_MB=0
+
 volumes:
-kosync_data:
+  kosync_data:
 ```
 
 ### 3. Launch KOSYNC
@@ -137,6 +141,10 @@ KOSYNC requires authentication. Create your first user with the following comman
 docker exec -it kosync ./kosync create-user admin
 ```
 Follow the prompts to set a secure password.
+
+> [!TIP]
+> For automation, you can use the `--password-stdin` flag:
+> `echo "mypassword" | docker exec -i kosync ./kosync create-user admin --password-stdin`
 
 ---
 
@@ -169,12 +177,30 @@ git clone --depth 1 --branch $(curl -s https://api.github.com/repos/nlafevers/ko
 ```
 then
 ```bash
-go build -o kosync .
+cd kosync
+go build -o kosync ./cmd/kosync
 ```
+
+### 2. Run as a non-root user
+Create a dedicated system user to run the service securely, and give it ownership of the binary and the data directory.
+```bash
+sudo useradd -r -s /usr/sbin/nologin kosync
+sudo mkdir -p data
+sudo chown -R kosync:kosync kosync data
+```
+
+### 3. Run the server
+KOSYNC reads its settings from environment variables or a `config.yaml` file (see [Configuration Reference](#-configuration-reference) for every option). The defaults are sensible for a first run:
+```bash
+sudo -u kosync ./kosync create-user admin
+sudo -u kosync ./kosync
+```
+
+---
 
 ## ⚙️ Configuration Reference
 
-All settings can be provided as environment variables (prefixed with `KOSYNC_`).
+All settings can be provided as environment variables (prefixed with `KOSYNC_`) or in a `config.yaml` file placed in the working directory (or a `./config` subdirectory).
 
 | Variable | Description | Default |
 | :--- | :--- | :--- |
@@ -182,25 +208,13 @@ All settings can be provided as environment variables (prefixed with `KOSYNC_`).
 | `KOSYNC_DATABASE_PATH` | Path where the database file will be stored. `KOSYNC_DB_PATH` remains supported as a legacy alias. | `./data/kosync.db` |
 | `KOSYNC_LOG_LEVEL` | Logging verbosity (`debug`, `info`, `warn`, `error`). | `info` |
 | `KOSYNC_JSON_LOG` | Enable structured JSON logging (best for Docker and log aggregators). | `false` |
-| `KOSYNC_LOG_PATH` | File path for unified logging. | - |
+| `KOSYNC_LOG_PATH` | Optional log file. When set, the server writes logs to this file **and** stderr; CLI commands log to this file only. | - |
 | `KOSYNC_DISABLE_REGISTRATION` | Disable user registration endpoints. Set to `false` to allow new users to self-register. | `true` |
 | `KOSYNC_STORAGE_CAP_MB` | Maximum database size in MB (0 to disable). | `0` |
 | `KOSYNC_RATE_LIMIT_ENABLED` | Enable rate limiting on API requests. | `true` |
 | `KOSYNC_RATE_LIMIT_PER_MINUTE` | Maximum requests allowed per minute per IP. | `30` |
 | `KOSYNC_RATE_LIMIT_BURST` | Maximum burst size for rate limiting. | `10` |
 | `KOSYNC_TRUST_PROXY_HEADERS` | Trust `X-Forwarded-For` headers for client IP detection (enable only behind a trusted reverse proxy). | `false` |
-
-### 3. Run as non-root user
-Create a dedicated user to run the service securely.
-```bash
-sudo useradd -r -s /usr/sbin/nologin kosync
-sudo chown kosync:kosync kosync kosync.db
-```
-
-### 4. Run the server
-```bash
-./kosync
-```
 
 ---
 
@@ -236,33 +250,6 @@ User-management commands create and migrate the configured database automaticall
 
 ---
 
-## 🔒 Security & Deployment
-
-### Reverse Proxy (HTTPS)
-It is highly recommended to put KOSYNC behind a reverse proxy like **Caddy** for automatic HTTPS.
-**Sample Caddyfile:**
-```
-your-domain.com {
-    reverse_proxy localhost:8081
-}
-```
-
-### Firewall (UFW)
-Only expose ports 80/443 to the world.
-```bash
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-sudo ufw enable
-```
-
-### Backups
-Since KOSYNC uses SQLite, simply backup the `.db` file daily using `sqlite3`:
-```bash
-sqlite3 kosync.db ".backup 'kosync_backup.db'"
-```
-
----
-
 ## 📊 Logging
 
 KOSYNC uses structured `slog` logging to provide an audit trail of system events, user management actions, and reading progress synchronization. All API logs include a `request_id` to correlate multiple events (like auth success followed by a progress update) within a single request.
@@ -270,6 +257,9 @@ KOSYNC uses structured `slog` logging to provide an audit trail of system events
 ### Log Formats
 - **Human-Readable (Default):** Optimized for terminal viewing.
 - **JSON:** Structured output for log aggregators (e.g., Loki, ELK). Enable with `KOSYNC_JSON_LOG=true`.
+
+### Log Destinations
+When `KOSYNC_LOG_PATH` is set, the **server** writes structured logs to both stderr and that file. **CLI** commands (`create-user`, `delete-user`, `change-password`) write structured logs to the file only — or discard them when no path is set — so the terminal shows only the one-line human-readable result.
 
 ### Log Levels
 - **`debug`:** Shows granular details including database interactions, auth success events, and timestamp-based sync resolution (e.g., why an update was skipped).
@@ -288,11 +278,6 @@ KOSYNC uses structured `slog` logging to provide an audit trail of system events
 **Sync Resolution (DEBUG):**
 `time=2026-05-27T10:10:00Z level=DEBUG msg="upserting progress" username=alice document=doc123 percentage=0.5 timestamp=1779940888`
 
-### Unified Logging (Shared Log File)
-Because the server and CLI commands run as separate processes, their logs normally appear in the terminal where they are executed. To unify all logs in a single file, use the `KOSYNC_LOG_PATH` environment variable.
-
-When `KOSYNC_LOG_PATH` is set, logs will be written to **both** the console (stdout) and the specified file.
-
 ---
 
 ## 🏗 Technical Overview
@@ -301,7 +286,7 @@ KOSYNC is built with a focus on simplicity and extreme efficiency.
 
 ### Architecture
 - **Layered Design:** Separates concerns into **Middleware** (Auth/Headers), **Handlers** (API Logic), and **Storage** (SQLite).
-- **Go 1.26+ Standard Library:** Uses the enhanced `net/http` router for performant, dependency-free routing.
+- **Go 1.25+ Standard Library:** Uses the enhanced `net/http` router for performant, dependency-free routing.
 - **Strict Protocol Compliance:** Enforces the custom `application/vnd.koreader.v1+json` MIME type required by the KOReader client.
 
 ### Data Integrity & Performance
@@ -316,10 +301,21 @@ KOSYNC is built with a focus on simplicity and extreme efficiency.
 
 ---
 
+## 🔒 Security
+
+KOSYNC uses **HTTP Basic Authentication**. It is simple and widely compatible, but it transmits credentials in plain text, so you should **always run KOSYNC behind an HTTPS reverse proxy** (such as Caddy, Nginx, or Traefik).
+
+Step-by-step deployment instructions — reverse proxy, firewall, backups, and running KOPDS and KOSYNC together — live in the KOSERVER project deployment guide.
+
+> [!NOTE]
+> A reverse proxy alone does not make your server completely secure.  You are responsible for properly configuring your server to meet your security needs.
+
+---
+
 ## ❓ Troubleshooting
 
 ### Connection Issues
-- **KOReader "Network Error":** Verify your server is reachable from your e-reader's IP. Ensure your firewall (UFW) allows traffic on the configured port.
+- **KOReader "Network Error":** Verify your server is reachable from your e-reader's IP. Ensure your firewall allows traffic on the configured port.
 - **406 Not Acceptable:** KOReader is very picky about headers. Ensure you haven't modified the `AcceptMiddleware`.
 
 ### Configuration & Logs
