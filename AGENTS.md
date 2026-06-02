@@ -4,7 +4,7 @@ KOSYNC is a lightweight server designed to facilitate synchronization of ebooks 
 
 ## Cross-Project Uniformity
 
-KOSYNC is maintained alongside KOPDS with a maximum-uniformity goal. Functions that perform the same job in both repositories should use the same names and identical code wherever practical. See `UNIFORMITY.md` for the current inventory and boundaries. Keep CLI user management, password helpers, logger construction, config path resolution, SQLite opening, and storage-cap helper flow aligned unless a documented project-specific domain difference requires divergence.
+KOSYNC is maintained alongside KOPDS with a maximum-uniformity goal. Functions that perform the same job in both repositories should use the same names and identical code wherever practical. See `../uniformity-plan.md` for the current inventory and boundaries. Keep CLI user management, password helpers, logger construction, config path resolution, SQLite opening, and storage-cap helper flow aligned unless a documented project-specific domain difference requires divergence.
 
 ## Project Overview
 
