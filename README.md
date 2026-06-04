@@ -105,34 +105,44 @@ Create a file named `deploy/docker-compose.yml` and paste the following content.
 ```yaml
 services:
   kosync:
-    image: ghcr.io/nlafevers/kosync:latest # or build: .
+    build:
+      context: ..
+      dockerfile: build/Dockerfile
+    image: ghcr.io/nlafevers/kosync:latest
     container_name: kosync
     restart: unless-stopped
     ports:
       - "8081:8081"
-    # Security hardening
     read_only: true
     tmpfs:
       - /tmp
     volumes:
-      # Persistent storage for the SQLite database
-      - kosync_data:/app/data
+      - kosync_data:/data
     environment:
       - KOSYNC_PORT=8081
-      - KOSYNC_DATABASE_PATH=/app/data/kosync.db
+      - KOSYNC_DATABASE_PATH=/data/kosync.db
       - KOSYNC_LOG_LEVEL=info
-      - KOSYNC_JSON_LOG=true
+      - KOSYNC_JSON_LOG=true # Recommended for Docker
       - KOSYNC_DISABLE_REGISTRATION=true
       - KOSYNC_STORAGE_CAP_MB=0
+      - KOSYNC_RATE_LIMIT_ENABLED=true
+      - KOSYNC_RATE_LIMIT_PER_MINUTE=30
+      - KOSYNC_RATE_LIMIT_BURST=10
+      - KOSYNC_TRUST_PROXY_HEADERS=false
 
 volumes:
   kosync_data:
+
 ```
 
 ### 3. Launch KOSYNC
 Start the server in the background:
 ```bash
 docker compose up -d
+```
+To force a local build, rather than downloading the image from the Github Container Registry add the `--build` option.
+```bash
+docker compose up -d --build
 ```
 
 ### 4. Create Your Admin User
@@ -195,6 +205,9 @@ KOSYNC reads its settings from environment variables or a `config.yaml` file (se
 sudo -u kosync ./kosync create-user admin
 sudo -u kosync ./kosync
 ```
+
+> [!NOTE]
+> Environment variables always take precedence over settings in `config.yaml`. In Docker, environment variables are the standard way to configure the container, but you can also mount a `config.yaml` to `/app/data/kosync.yaml` if you prefer.
 
 ---
 
@@ -264,6 +277,8 @@ When `KOSYNC_LOG_PATH` is set, the **server** writes structured logs to both std
 **Docker note:** `docker exec` runs in a separate process — its output goes directly to your terminal, not through Docker's logging driver. CLI user-management commands therefore never appear in `docker logs` regardless of log settings. If you need a persistent audit trail of CLI operations, set `KOSYNC_LOG_PATH` to a path on a mounted volume (e.g., `/app/data/kosync.log`) and read that file directly.
 
 ### Log Levels
+You can adjust the verbosity of the logs using the `KOSYNC_LOG_LEVEL` setting:
+
 - **`debug`:** Shows granular details including database interactions, auth success events, and timestamp-based sync resolution (e.g., why an update was skipped).
 - **`info`:** Recommended for production. Shows server startup, CLI successes, and completed HTTP requests.
 - **`warn`:** Logs handled issues like authentication failures (401), rate-limit hits, or storage cap pruning events.
