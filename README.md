@@ -200,7 +200,7 @@ sudo chown -R kosync:kosync kosync data
 ```
 
 ### 3. Run the server
-KOSYNC reads its settings from environment variables or a `config.yaml` file (see [Configuration Reference](#-configuration-reference) for every option). The defaults are sensible for a first run:
+KOSYNC reads its settings from environment variables or a `config.yaml` file (see [Configuration Reference](#-configuration-reference) for every option). For native installs, environment variables are the most reliable approach — see the note below. The defaults are sensible for a first run:
 ```bash
 sudo -u kosync ./kosync create-user admin
 sudo -u kosync ./kosync
@@ -208,12 +208,14 @@ sudo -u kosync ./kosync
 
 > [!NOTE]
 > Environment variables always take precedence over settings in `config.yaml`. In Docker, environment variables are the standard way to configure the container, but you can also mount a `config.yaml` to `/app/data/kosync.yaml` if you prefer.
+>
+> **For native (non-Docker) installs, prefer environment variables.** KOSYNC searches for `config.yaml` only in the working directory at startup (`.` and `./config`). When run under systemd the working directory is `/`, and when run as a CLI command it is wherever your shell happens to be — neither is a reliable place for a config file. Use environment variables in your systemd unit instead. A future release will add stable search paths such as `/etc/kosync/` and `/var/lib/kosync/` for native installs.
 
 ---
 
 ## ⚙️ Configuration Reference
 
-All settings can be provided as environment variables (prefixed with `KOSYNC_`) or in a `config.yaml` file placed in the working directory (or a `./config` subdirectory).
+All settings can be provided as environment variables (prefixed with `KOSYNC_`) or in a `config.yaml` file placed in the working directory (or a `./config` subdirectory). For native installs, environment variables are recommended — see the configuration note above.
 
 | Variable | Description | Default |
 | :--- | :--- | :--- |
