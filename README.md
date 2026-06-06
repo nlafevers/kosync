@@ -33,6 +33,8 @@ While official and alternative synchronization solutions exist, KOSYNC focuses o
 2. **Resource Efficiency:** Built in pure Go, KOSYNC is a featherweight, single-binary application with a minimal memory footprint. It is designed to be "set and forget," operating perfectly on everything from enterprise servers to the most resource-constrained home lab hardware (like a Raspberry Pi Zero).
 3. **Privacy-First & Secure:** KOSYNC is designed for full self-hosting. Your reading habits and sync data never leave your infrastructure. With bcrypt-hashed credentials and hardened API endpoints, it ensures your data remains yours alone.
 
+> **Part of a pair:** KOSYNC is one half of [KOSERVER](https://github.com/nlafevers/koserver), a complete self-hosted KOReader backend. Its companion, [KOPDS](https://github.com/nlafevers/kopds), serves your Calibre library as an OPDS catalog. See the [KOSERVER guide](https://github.com/nlafevers/koserver) to deploy both together behind a single HTTPS reverse proxy.
+
 ---
 
 ## ✨ Key Features
