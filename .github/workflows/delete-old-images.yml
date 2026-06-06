@@ -12,7 +12,7 @@ jobs:
       packages: write
     steps:
       - name: Delete Old Images
-        uses: snok/container-retention-policy@v3.0.0
+        uses: snok/container-retention-policy@v3.1.0
         with:
           account: user
           token: ${{ secrets.GITHUB_TOKEN }}
