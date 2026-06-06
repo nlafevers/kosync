@@ -210,7 +210,9 @@ func createUser(cfg *config.Config, username, password string) {
 	db, storage := openCLIStorage(cfg)
 	defer db.Close()
 
-	hash, err := api.HashPassword(password)
+	// Store bcrypt(md5(password)) to match what the KOReader client sends at
+	// login; see api.KOReaderKey.
+	hash, err := api.HashPassword(api.KOReaderKey(password))
 	if err != nil {
 		logger.LogCLIFailure(nil, operation, username, "failed to hash password: "+err.Error())
 		fmt.Printf("Failed to hash password: %v\n", err)
@@ -247,7 +249,9 @@ func changePassword(cfg *config.Config, username, password string) {
 	db, storage := openCLIStorage(cfg)
 	defer db.Close()
 
-	hash, err := api.HashPassword(password)
+	// Store bcrypt(md5(password)) to match what the KOReader client sends at
+	// login; see api.KOReaderKey.
+	hash, err := api.HashPassword(api.KOReaderKey(password))
 	if err != nil {
 		logger.LogCLIFailure(nil, operation, username, "failed to hash password: "+err.Error())
 		fmt.Printf("Failed to hash password: %v\n", err)

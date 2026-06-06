@@ -63,8 +63,13 @@ func TestCLIUserManagement(t *testing.T) {
 		if err != nil {
 			t.Errorf("user not found in db: %v", err)
 		}
-		if !api.CheckPassword(hash, "clipass") {
+		// The CLI stores bcrypt(md5(password)) so the hash matches the md5 key
+		// the KOReader client sends, not the raw password.
+		if !api.CheckPassword(hash, api.KOReaderKey("clipass")) {
 			t.Error("password mismatch")
+		}
+		if api.CheckPassword(hash, "clipass") {
+			t.Error("hash unexpectedly matched the raw password instead of the md5 key")
 		}
 	})
 
@@ -83,7 +88,7 @@ func TestCLIUserManagement(t *testing.T) {
 		// Verify in DB
 		s := openTestStorageReadOnly(t, dbPath)
 		hash, _ := s.GetUserHash("clitest")
-		if !api.CheckPassword(hash, "newclipass") {
+		if !api.CheckPassword(hash, api.KOReaderKey("newclipass")) {
 			t.Error("password update failed")
 		}
 	})
