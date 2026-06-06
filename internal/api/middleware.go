@@ -17,7 +17,20 @@ import (
 	"golang.org/x/time/rate"
 )
 
+// KOReaderMimeType is the MIME type the KOReader client sends in its Accept
+// header on every request; AcceptMiddleware requires it.
 const KOReaderMimeType = "application/vnd.koreader.v1+json"
+
+// ResponseMimeType is the Content-Type we send on responses. It must be plain
+// "application/json" rather than KOReaderMimeType: KOReader's Spore client only
+// decodes a response body into an object when the Content-Type passes its JSON
+// check. Before koreader-base's 2026-02 "detect more json content types" patch,
+// that check was a literal substring search for "application/json", which
+// "application/vnd.koreader.v1+json" fails — leaving the body an undecoded
+// string so the sync plugin sees no progress ("No progress found for this
+// document."). Plain "application/json" is accepted by both the old substring
+// check and the newer pattern, so it is compatible with all client versions.
+const ResponseMimeType = "application/json"
 
 type responseWriter struct {
 	http.ResponseWriter
@@ -148,7 +161,7 @@ func AcceptMiddleware(next http.Handler) http.Handler {
 // ContentTypeMiddleware ensures the response Content-Type is always set correctly.
 func ContentTypeMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", KOReaderMimeType)
+		w.Header().Set("Content-Type", ResponseMimeType)
 		next.ServeHTTP(w, r)
 	})
 }

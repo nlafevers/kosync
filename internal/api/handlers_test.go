@@ -178,8 +178,8 @@ func TestHandleAuthContentType(t *testing.T) {
 		t.Errorf("expected 200 OK, got %d", w.Code)
 	}
 	ct := w.Header().Get("Content-Type")
-	if ct != KOReaderMimeType {
-		t.Errorf("expected Content-Type %q, got %q", KOReaderMimeType, ct)
+	if ct != ResponseMimeType {
+		t.Errorf("expected Content-Type %q, got %q", ResponseMimeType, ct)
 	}
 }
 
@@ -199,8 +199,8 @@ func TestHandleUserCreateContentType(t *testing.T) {
 		t.Errorf("expected 201 Created, got %d", w.Code)
 	}
 	ct := w.Header().Get("Content-Type")
-	if ct != KOReaderMimeType {
-		t.Errorf("expected Content-Type %q, got %q", KOReaderMimeType, ct)
+	if ct != ResponseMimeType {
+		t.Errorf("expected Content-Type %q, got %q", ResponseMimeType, ct)
 	}
 }
 

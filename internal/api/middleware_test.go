@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -122,4 +123,28 @@ func TestAcceptMiddleware(t *testing.T) {
 			t.Errorf("expected 406 Not Acceptable, got %d", w.Code)
 		}
 	})
+}
+
+// TestContentTypeMiddlewareSetsDecodableJSON guards the response Content-Type.
+// KOReader's Spore client (pre-2026-02) only decodes a response body when the
+// Content-Type contains the literal substring "application/json". The KOReader
+// MIME type "application/vnd.koreader.v1+json" does NOT contain that substring,
+// so using it as the response Content-Type silently breaks progress retrieval.
+// The response type must therefore be plain "application/json".
+func TestContentTypeMiddlewareSetsDecodableJSON(t *testing.T) {
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	req := httptest.NewRequest("GET", "/", nil)
+	w := httptest.NewRecorder()
+
+	ContentTypeMiddleware(next).ServeHTTP(w, req)
+
+	ct := w.Header().Get("Content-Type")
+	if ct != "application/json" {
+		t.Errorf("response Content-Type = %q, want %q", ct, "application/json")
+	}
+	if !strings.Contains(ct, "application/json") {
+		t.Errorf("response Content-Type %q is not decodable by KOReader's Spore client", ct)
+	}
 }

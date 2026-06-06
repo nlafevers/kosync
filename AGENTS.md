@@ -155,7 +155,7 @@ type Progress struct {
 
 ### Pitfalls to Watch Out For
 
-- The Content-Type Header: KOReader is picky. Ensure your server always sends `Content-Type: application/vnd.koreader.v1+json`. If you send `application/json`, the client might ignore the response.
+- The Content-Type Header: distinguish the request `Accept` header from the response `Content-Type`. KOReader **sends** `Accept: application/vnd.koreader.v1+json` on every request, and the server requires it (see `AcceptMiddleware`). But the server must **respond** with `Content-Type: application/json`, NOT the `vnd.koreader.v1+json` type. KOReader's Spore client only decodes a JSON response body when the `Content-Type` is recognized as JSON; before koreader-base's 2026-02 "detect more json content types" patch, that check was a literal substring search for `application/json`, which `application/vnd.koreader.v1+json` fails. Responding with the `vnd` type leaves the body undecoded so the sync plugin reports "No progress found for this document." even on a 200. Plain `application/json` is accepted by every client version. See `ResponseMimeType` vs `KOReaderMimeType` in `internal/api/middleware.go`.
 - URL Encoding: Sometimes the document IDs can contain characters that need careful handling in the URL path.
 
 ### Security

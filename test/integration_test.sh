@@ -8,6 +8,9 @@ URL="http://localhost:$PORT"
 DB="kosync_test.db"
 USER="testuser"
 PASS="testpass"
+# The KOReader client sends md5(password) as X-AUTH-KEY, and create-user stores
+# bcrypt(md5(password)) to match. Auth requests must therefore use the md5 key.
+KEY=$(printf %s "$PASS" | md5sum | cut -d' ' -f1)
 DOC="doc123"
 BIN_NAME="kosync_bin"
 TMP_BODY=$(mktemp)
@@ -30,10 +33,10 @@ assert_status() {
 assert_content_type() {
     local actual="$1"
     local label="$2"
-    if [[ "$actual" == *"application/vnd.koreader.v1+json"* ]]; then
+    if [[ "$actual" == *"application/json"* ]]; then
         echo "PASS [$label content-type]: $actual"
     else
-        echo "FAIL [$label content-type]: expected application/vnd.koreader.v1+json, got '$actual'"
+        echo "FAIL [$label content-type]: expected application/json, got '$actual'"
         echo "--- Server Logs ---"
         cat server.log
         exit 1
@@ -91,7 +94,7 @@ sleep 2
 # Auth success: valid credentials → 200 with KOReader content type
 echo "Testing Auth Success..."
 curl_check -X GET "$URL/users/auth" \
-    -H "X-AUTH-USER:$USER" -H "X-AUTH-KEY:$PASS" \
+    -H "X-AUTH-USER:$USER" -H "X-AUTH-KEY:$KEY" \
     -H "Accept: application/vnd.koreader.v1+json"
 assert_status 200 "$RESP_CODE" "GET /users/auth valid"
 assert_content_type "$RESP_CTYPE" "GET /users/auth valid"
@@ -112,7 +115,7 @@ assert_status 401 "$RESP_CODE" "GET /users/auth no headers"
 # Progress update (PUT) → 200 with KOReader content type
 echo "Testing Progress Update..."
 curl_check -X PUT "$URL/syncs/progress" \
-    -H "X-AUTH-USER:$USER" -H "X-AUTH-KEY:$PASS" \
+    -H "X-AUTH-USER:$USER" -H "X-AUTH-KEY:$KEY" \
     -H "Content-Type: application/json" \
     -H "Accept: application/vnd.koreader.v1+json" \
     -d "{\"document\":\"$DOC\",\"percentage\":0.5,\"progress\":\"loc1\"}"
@@ -122,7 +125,7 @@ assert_content_type "$RESP_CTYPE" "PUT /syncs/progress"
 # Progress retrieval (GET) → 200 with KOReader content type
 echo "Testing Progress Retrieval..."
 curl_check -X GET "$URL/syncs/progress/$DOC" \
-    -H "X-AUTH-USER:$USER" -H "X-AUTH-KEY:$PASS" \
+    -H "X-AUTH-USER:$USER" -H "X-AUTH-KEY:$KEY" \
     -H "Accept: application/vnd.koreader.v1+json"
 assert_status 200 "$RESP_CODE" "GET /syncs/progress/$DOC"
 assert_content_type "$RESP_CTYPE" "GET /syncs/progress/$DOC"
@@ -139,7 +142,7 @@ echo "PASS [progress body]: found percentage 0.5"
 # Progress not found (GET unknown doc with valid auth) → 404
 echo "Testing Progress Not Found..."
 curl_check -X GET "$URL/syncs/progress/unknowndoc" \
-    -H "X-AUTH-USER:$USER" -H "X-AUTH-KEY:$PASS" \
+    -H "X-AUTH-USER:$USER" -H "X-AUTH-KEY:$KEY" \
     -H "Accept: application/vnd.koreader.v1+json"
 assert_status 404 "$RESP_CODE" "GET /syncs/progress/unknowndoc"
 
