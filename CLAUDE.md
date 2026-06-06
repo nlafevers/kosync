@@ -1,2 +1,0 @@
-# Project Context
-@./AGENTS.md
